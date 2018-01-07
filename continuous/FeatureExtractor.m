@@ -31,21 +31,39 @@ function obj = FeatureExtractor(keystrokes)
 			uniqueChars = unique(keystrokes(:,1));
 			singleActions = cell(length(uniqueChars), 2);
 			
-			for i=1:length(uniqueChars)
-				singleActions{i,1} = uniqueChars(i);
+			for ii=1:length(uniqueChars)
+				singleActions{ii,1} = uniqueChars(ii);
+				%todo: retreive indices from unique instead
 				indices = find(strcmp(keystrokes(:,1), ...
-					uniqueChars{i}));
-				singleActions{i,2} = cell2mat(keystrokes(indices, 2));
+					uniqueChars{ii}));
+				singleActions{ii,2} = cell2mat(keystrokes(indices, 2));
 			end
 		end
-		%{
+		
 		function digraphActions = extractDigraphActions(keystrokes)
-			uniqueDigraphs = cell(unique(cell2table(keystrokes(:,[1 2]))));
-			indices = find(strcmp(keystrokes(:,1), ...
-				uniqueDigraphs{}
+			% Convert keystroke structure to a table due to unique()
+			% not supporting combinations of cellarray columns
+			uniqueDigraphsTable = ... 
+				unique(cell2table(keystrokes(:,[1 3])), 'rows');
+			uniqueDigraphs = table2cell(uniqueDigraphsTable);
+			
+			%pre-allocate memory for cell array
+			digraphActions = cell(length(uniqueDigraphs),6);
+			
+			digraphActions{:,1:2} = uniqueDigraphs{:,1:2};
+			for ii=1:length(uniqueDigraphs)
+				%digraphActions{ii,1} = uniqueDigraphs{ii,1};
+				%digraphActions{ii,2} = uniqueDigraphs{ii,2};
+				
+			end
+			
+			digraphActions = uniqueDigraphs;
+			
+			%indices = find(strcmp(keystrokes(:,1), ...
+			%	uniqueDigraphs{}))
 			
 		end
-		%}
+		
 	end
 end
 
