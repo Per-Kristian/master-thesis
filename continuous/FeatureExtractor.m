@@ -79,26 +79,23 @@ function obj = FeatureExtractor(keystrokes)
 			rr = zeros(1, length(occurIndices));
 			
 			for jj = 1:length(occurIndices)
-				digraphRow = keystrokes(occurIndices(jj),:);
-				nextRow = keystrokes(occurIndices(jj)+1,:);
-				%rpLatency = keystrokes{occurrenceIndices(jj),4};
-				rpLatency = digraphRow{4};
-				% Check if the first key in the next row is the correct
-				% one. If not, the behavior logging tool may have been
-				% paused at that point, or some error may have occurred
-				% during keystroke logging.
-				nextKeyIsCorrect = strcmp(digraphRow{3}, nextRow{1});
-				if nextKeyIsCorrect && rpLatency < 2000
-					%{
-						pp = [pp digraphRow{2} + digraphRow{4}];
-						pr = [pr digraphRow{2} + digraphRow{4}+nextRow{2}];
-						rp = [rp rpLatency];
-						rr = [rr digraphRow{4} + nextRow{2}];
-					%}
-					pp(jj) = digraphRow{2} + digraphRow{4};
-					pr(jj) = digraphRow{2} + digraphRow{4}+nextRow{2};
-					rp(jj) = rpLatency;
-					rr(jj) = digraphRow{4} + nextRow{2};
+				% todo: avoid using this if statement inside loop.
+				if occurIndices(jj) ~= length(keystrokes)
+					digraphRow = keystrokes(occurIndices(jj),:);
+					nextRow = keystrokes(occurIndices(jj)+1,:);
+					%rpLatency = keystrokes{occurrenceIndices(jj),4};
+					rpLatency = digraphRow{4};
+					% Check if the first key in the next row is the correct
+					% one. If not, the behavior logging tool may have been
+					% paused at that point, or some error may have occurred
+					% during keystroke logging.
+					nextKeyIsCorrect = strcmp(digraphRow{3}, nextRow{1});
+					if nextKeyIsCorrect && rpLatency < 2000
+						pp(jj) = digraphRow{2} + digraphRow{4};
+						pr(jj) = digraphRow{2} + digraphRow{4}+nextRow{2};
+						rp(jj) = rpLatency;
+						rr(jj) = digraphRow{4} + nextRow{2};
+					end
 				end
 			end
 		end
