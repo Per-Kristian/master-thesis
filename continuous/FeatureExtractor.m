@@ -24,12 +24,13 @@ function obj = FeatureExtractor(keystrokes)
             
         end
 		%}
+		
 		function singleActions = extractSingleActions(keystrokes)
 			%METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
 			
 			uniqueChars = unique(keystrokes(:,1));
-			singleActions = cell(length(uniqueChars), 2);
+			singleActions = cell(length(uniqueChars), 4);
 			
 			for ii=1:length(uniqueChars)
 				singleActions{ii,1} = uniqueChars(ii);
@@ -37,9 +38,10 @@ function obj = FeatureExtractor(keystrokes)
 				indices = find(strcmp(keystrokes(:,1), ...
 					uniqueChars{ii}));
 				singleActions{ii,2} = cell2mat(keystrokes(indices, 2));
+				singleActions{ii,3} = mean(singleActions{ii,2});
+				singleActions{ii,4} = std(singleActions{ii,2});
 			end
 		end
-		
 		
 		
 		function digraphActions = extractDigraphActions(keystrokes)
@@ -47,10 +49,12 @@ function obj = FeatureExtractor(keystrokes)
 			Strings  = keystrokes(:, [1, 3]);
 			[uStrings, iStrings, iUniq] = unique(string(Strings), 'rows');
 			Values = cell2mat(keystrokes(:, [2, 4]));
+			% todo Do we really need to check duration here? remDur.
 			validValues = (Values(:, 1) < 100000 & Values(:, 2) < 1500);
+			%validValues = (Values(:, 1) < 100000);
 			
 			% Pre-allocate memory for cell array
-			digraphActions = cell(length(uStrings),6);
+			digraphActions = cell(length(uStrings),8);
 			uStringsCell = cellstr(uStrings);
 			digraphActions(:, 1:2) = uStringsCell(:, 1:2);
 
@@ -65,6 +69,9 @@ function obj = FeatureExtractor(keystrokes)
 				digraphActions{ii,4} = pr;
 				digraphActions{ii,5} = rp;
 				digraphActions{ii,6} = rr;
+				digraphActions{ii,7} = ...
+					[mean(pp),mean(pr),mean(rp),mean(rr)];
+				digraphActions{ii,8} = [std(pp),std(pr),std(rp),std(rr)];
 			end
 			
 			%indices = find(strcmp(keystrokes(:,1), ...
@@ -83,14 +90,14 @@ function obj = FeatureExtractor(keystrokes)
 				if occurIndices(jj) ~= length(keystrokes)
 					digraphRow = keystrokes(occurIndices(jj),:);
 					nextRow = keystrokes(occurIndices(jj)+1,:);
-					%rpLatency = keystrokes{occurrenceIndices(jj),4};
 					rpLatency = digraphRow{4};
 					% Check if the first key in the next row is the correct
 					% one. If not, the behavior logging tool may have been
 					% paused at that point, or some error may have occurred
 					% during keystroke logging.
 					nextKeyIsCorrect = strcmp(digraphRow{3}, nextRow{1});
-					if nextKeyIsCorrect && rpLatency < 2000
+					if nextKeyIsCorrect
+					%if nextKeyIsCorrect && rpLatency < 2000
 						pp(jj) = digraphRow{2} + digraphRow{4};
 						pr(jj) = digraphRow{2} + digraphRow{4}+nextRow{2};
 						rp(jj) = rpLatency;
