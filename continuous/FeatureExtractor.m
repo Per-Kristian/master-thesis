@@ -9,22 +9,6 @@ classdef FeatureExtractor
 	end
 	
 	methods (Static)
-		%{
-function obj = FeatureExtractor()
-           
-    end
-        
-function obj = FeatureExtractor(keystrokes)
-            %UNTITLED Construct an instance of this class
-            %   Detailed explanation goes here
-            
-            obj.uniqueChars = unique(keystrokes(:,1));
-            obj.singles = extractSingleActions(obj, keystrokes);
-            %obj.digraphs = extractDigraphActions(obj, keystrokes);
-            
-        end
-		%}
-		
 		function singleActions = extractSingleActions(keystrokes)
 			%METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
@@ -42,7 +26,6 @@ function obj = FeatureExtractor(keystrokes)
 				singleActions{ii,4} = std(singleActions{ii,2});
 			end
 		end
-		
 		
 		function digraphActions = extractDigraphActions(keystrokes)
 			% Store strings in one cell string:
