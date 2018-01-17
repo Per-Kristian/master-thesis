@@ -12,7 +12,6 @@ classdef FeatureExtractor
 		function singleActions = extractSingleActions(keystrokes)
 			%METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
-			
 			uniqueChars = unique(keystrokes(:,1));
 			singleActions = cell(length(uniqueChars), 4);
 			
@@ -46,7 +45,7 @@ classdef FeatureExtractor
 				% Find rows containing the current unique digraph
 				occurIndices = find(iUniq == ii & validValues);
 				[pp,pr,rp,rr] = ... 
-					FeatureExtractor.getLats(occurIndices, keystrokes);
+					FeatureExtractor.getRefLats(occurIndices, keystrokes);
 				%Return digraphs with latencies
 				digraphActions{ii,3} = pp;
 				digraphActions{ii,4} = pr;
@@ -62,7 +61,20 @@ classdef FeatureExtractor
 			
 		end
 		
-		function [pp,pr,rp,rr] = getLats(occurIndices, keystrokes)
+		function probe = createDiProbe(digraphRow, nextRow)
+			probe = cell(6);
+			probe{1} = digraphRow{1};
+			probe{2} = digraphRow{3};
+			
+			lats = calcLats(digraphRow, nextRow);
+			probe{3} = lats(1);
+			probe{4} = lats(2);
+			probe{5} = lats(3);
+			probe{6} = lats(4);
+			
+		end
+		
+		function [pp,pr,rp,rr] = getRefLats(occurIndices, keystrokes)
 			pp = zeros(1, length(occurIndices));
 			pr = zeros(1, length(occurIndices));
 			rp = zeros(1, length(occurIndices));
@@ -73,20 +85,25 @@ classdef FeatureExtractor
 				if occurIndices(jj) ~= length(keystrokes)
 					digraphRow = keystrokes(occurIndices(jj),:);
 					nextRow = keystrokes(occurIndices(jj)+1,:);
-					rpLatency = digraphRow{4};
-					% Check if the first key in the next row is the correct
-					% one. If not, the behavior logging tool may have been
-					% paused at that point, or some error may have occurred
-					% during keystroke logging.
-					nextKeyIsCorrect = strcmp(digraphRow{3}, nextRow{1});
-					if nextKeyIsCorrect
-					%if nextKeyIsCorrect && rpLatency < 2000
-						pp(jj) = digraphRow{2} + digraphRow{4};
-						pr(jj) = digraphRow{2} + digraphRow{4}+nextRow{2};
-						rp(jj) = rpLatency;
-						rr(jj) = digraphRow{4} + nextRow{2};
-					end
+					lats = calcLats(digraphRow, nextRow);
+					pp(jj) = lats(1);
+					pr(jj) = lats(2);
+					rp(jj) = lats(3);
+					rr(jj) = lats(4);
 				end
+			end
+		end
+		
+		function [pp,pr,rp,rr] = calcLats(digraphRow, nextRow)
+			% Check if the first key in the next row is the correct one. If 
+			% not, the behavior logging tool may have been paused at that 
+			% point, or some error may have occurred during keylogging.
+			nextKeyIsCorrect = strcmp(digraphRow{3}, nextRow{1});
+			if nextKeyIsCorrect
+				pp = digraphRow{2} + digraphRow{4};
+				pr = digraphRow{2} + digraphRow{4}+nextRow{2};
+				rp = digraphRow{4};
+				rr = digraphRow{4} + nextRow{2};
 			end
 		end
 		
