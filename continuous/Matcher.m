@@ -4,6 +4,7 @@ classdef Matcher
 	
 	properties (Access = private)
 		reference
+		currentRow;
 	end
 	
 	methods
@@ -11,6 +12,21 @@ classdef Matcher
 			%MATCHER Construct an instance of this class
 			%   Expects a reference formatted by FeatureExtractor.
 			obj.reference = reference;
+		end
+		
+		function score = getMonoScores(obj, probe)
+			[minDist, meanDist, maxDist] = monoSMD(obj, probe);
+			score = 1-(meanDist-minDist)/(maxDist-minDist);
+		end
+		
+		function score = getDiScore(obj, probe)
+			index = find(strcmp(obj.reference(:,1), probe{1}) && ...
+				strcmp(obj.reference(:,2), probe{3}));
+			refRow = obj.reference(index, :);
+			
+			[minDist, meanDist] = obj.diSMD(probe, refRow);
+			maxDist = obj.diCD(probe, refRow);
+			score = (meanDist * maxDist) / minDist;
 		end
 		
 		function [minDist, meanDist, maxDist] = monoSMD(obj, probe)
@@ -29,12 +45,8 @@ classdef Matcher
 			maxDist = max(distances);
 		end
 		
-		function [minDist, meanDist] = diSMD(obj, probe)
-			index = find(strcmp(obj.reference(:,1), probe{1}) && ...
-				strcmp(obj.reference(:,2), probe{3}));
-			refRow = obj.reference(index, :);
+		function [minDist, meanDist] = diSMD(obj, probe, refRow)
 			stdv = refRow{8};
-			
 			ppDistances = (abs(probe{3}-refRow{3}))./stdv(1);
 			prDistances = (abs(probe{4}-refRow{4}))./stdv(2);
 			rpDistances = (abs(probe{5}-refRow{5}))./stdv(3);
@@ -43,6 +55,13 @@ classdef Matcher
 			totalDist = ppDistances+prDistances+rpDistances+rrDistances;
 			minDist = min(totalDist);
 			meanDist = mean(totalDist);
+		end
+		
+		function maxDist = diCD(obj, probe, refRow)
+			% Returns the maximum Correlation Distance between the probe
+			% and reference.
+			
+			
 		end
 	end
 end

@@ -12,6 +12,7 @@ classdef FeatureExtractor
 		function singleActions = extractSingleActions(keystrokes)
 			%METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
+			
 			uniqueChars = unique(keystrokes(:,1));
 			singleActions = cell(length(uniqueChars), 4);
 			
