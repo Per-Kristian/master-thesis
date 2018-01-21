@@ -3,20 +3,45 @@ classdef Matcher
 	%   Detailed explanation goes here
 	
 	properties (Access = private)
-		reference
-		currentRow;
+		monoRef
+		currentRow
+		diRef
 	end
 	
 	methods
-		function obj = Matcher(reference)
+		function obj = Matcher(monoRef, diRef)
 			%MATCHER Construct an instance of this class
 			%   Expects a reference formatted by FeatureExtractor.
-			obj.reference = reference;
+			obj.monoRef = monoRef;
+			obj.diRef = diRef;
 		end
 		
 		function score = getMonoScores(obj, probe)
 			[minDist, meanDist, maxDist] = monoSMD(obj, probe);
 			score = 1-(meanDist-minDist)/(maxDist-minDist);
+		end
+		
+		function score = getSimpleMonoScore(obj, probe)
+			index = find(strcmp(obj.monoRef(:,1), probe{1}));
+			refRow = obj.monoRef(index, :);
+			refMean = refRow{3};
+			refStd = refRow{4};
+			
+			score = abs(probe{2}-refMean)/refStd;
+		end
+		
+		function score = getSimpleDiScore(obj, probe)
+			index = find(strcmp(obj.diRef(:,1), probe{1}) && ...
+				strcmp(obj.diRef(:,2), probe{3}));
+			refRow = obj.diRef(index, :);
+			latMeans = refRow{7};
+			latStds = refRow{8};
+			ppDist = (abs(probe{3}-latMeans(1)))/latStds(1);
+			prDist = (abs(probe{4}-latMeans(2)))/latStds(2);
+			rpDist = (abs(probe{5}-latMeans(3)))/latStds(3);
+			rrDist = (abs(probe{6}-latMeans(4)))/latStds(4);
+			
+			score = (ppDist + prDist + rpDist + rrDist) / 4;
 		end
 		
 		function score = getDiScore(obj, probe)

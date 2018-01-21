@@ -5,7 +5,6 @@ classdef FeatureExtractor
 	properties (SetAccess = private)
 		singles
 		digraphs
-		uniqueChars
 	end
 	
 	methods (Static)
