@@ -16,7 +16,7 @@ classdef FeatureExtractor
 			singleActions = cell(length(uniqueChars), 4);
 			
 			for ii=1:length(uniqueChars)
-				singleActions{ii,1} = uniqueChars(ii);
+				singleActions{ii,1} = uniqueChars{ii};
 				%todo: retreive indices from unique instead
 				indices = find(strcmp(keystrokes(:,1), ...
 					uniqueChars{ii}));

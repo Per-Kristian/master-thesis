@@ -18,6 +18,8 @@ classdef TrustModel
 			%   Detailed explanation goes here
 			outputArg = obj.Property1 + inputArg;
 		end
+		
+		
 	end
 end
 

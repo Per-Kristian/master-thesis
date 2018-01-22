@@ -13,8 +13,8 @@ if strcmp('all', user)
 	disp(strcat('Wrote digraph features for all users to ', dipath));
 else
 	% Extract monograph features for a specific user
-	filename = sprintf('../../../Data/filtered/User_%02d.mat', user);
-	keystrokes = importdata(filename);
+	fromFile = sprintf('../../../Data/filtered/User_%02d.mat', user);
+	keystrokes = importdata(fromFile);
 	features = FeatureExtractor.extractDigraphActions(keystrokes);
 	toFile = sprintf(strcat(dipath, 'User_%02d.mat'), user);
 	save(toFile, 'features');

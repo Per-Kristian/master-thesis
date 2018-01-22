@@ -1,19 +1,26 @@
-classdef Matcher
+classdef Matcher < handle
 	%MATCHER Summary of this class goes here
 	%   Detailed explanation goes here
 	
-	properties (Access = private)
+	properties
 		monoRef
-		currentRow
 		diRef
 	end
 	
 	methods
-		function obj = Matcher(monoRef, diRef)
+		%{
+		function obj = Matcher()
+			% do nothing
+		end
+		%}
+		
+		function obj = Matcher(varargin)
 			%MATCHER Construct an instance of this class
 			%   Expects a reference formatted by FeatureExtractor.
-			obj.monoRef = monoRef;
-			obj.diRef = diRef;
+			if nargin>0
+				obj.monoRef = varargin{1};
+				obj.diRef = varargin{2};
+			end
 		end
 		
 		function score = getMonoScores(obj, probe)
@@ -87,6 +94,14 @@ classdef Matcher
 			% and reference.
 			
 			
+		end
+		
+		function set.monoRef(obj, monoRefIn)
+			obj.monoRef = monoRefIn;
+		end
+		
+		function set.diRef(obj, diRefIn)
+			obj.diRef = diRefIn;
 		end
 	end
 end
