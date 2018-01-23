@@ -6,6 +6,11 @@ filteredPath = '../../../Data/filtered/';
 monoPath = '../../../Data/filtered/MonographFeatures/';
 diPath = '../../../Data/filtered/DigraphFeatures/';
 
+threshold = 2;
+width = 0.35;
+maxRwrd = 1;
+maxPen = 1;
+
 if strcmp('all', user)
 	matcher = Matcher;
 	for ii = 1:57
@@ -19,10 +24,11 @@ if strcmp('all', user)
 		matcher.monoRef = monoRef;
 		matcher.diRef = diRef;
 		fullLength = length(fullFile);
+		trustModel = TrustModel(threshold, width, maxRwrd, maxPen);
 		for jj = 1:fullLength
 			probe = fullFile(jj, 1:2);
 			score = matcher.getSimpleMonoScore(probe);
-			% todo: send to trust model
+			newTrust = trustModel.alterTrust();
 		end
 		
 	end

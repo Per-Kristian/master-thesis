@@ -21,8 +21,8 @@ classdef FeatureExtractor
 				indices = find(strcmp(keystrokes(:,1), ...
 					uniqueChars{ii}));
 				singleActions{ii,2} = cell2mat(keystrokes(indices, 2));
-				singleActions{ii,3} = mean(singleActions{ii,2});
-				singleActions{ii,4} = std(singleActions{ii,2});
+				singleActions{ii,3} = nanmean(singleActions{ii,2});
+				singleActions{ii,4} = nanstd(singleActions{ii,2});
 			end
 		end
 		
@@ -40,7 +40,6 @@ classdef FeatureExtractor
 			uStringsCell = cellstr(uStrings);
 			digraphActions(:, 1:2) = uStringsCell(:, 1:2);
 
-
 			for ii = 1:length(uStrings)
 				% Find rows containing the current unique digraph
 				occurIndices = find(iUniq == ii & validValues);
@@ -52,9 +51,12 @@ classdef FeatureExtractor
 				digraphActions{ii,5} = rp;
 				digraphActions{ii,6} = rr;
 				digraphActions{ii,7} = ...
-					[mean(pp),mean(pr),mean(rp),mean(rr)];
-				digraphActions{ii,8} = [std(pp),std(pr),std(rp),std(rr)];
+					[nanmean(pp),nanmean(pr),nanmean(rp),nanmean(rr)];
+				digraphActions{ii,8} = ... 
+					[nanstd(pp),nanstd(pr),nanstd(rp),nanstd(rr)];
 			end
+			% remove rows without valid latencies
+			digraphActions(isnan(digraphActions{:,7}),:)=[];
 			
 			%indices = find(strcmp(keystrokes(:,1), ...
 			%	uniqueDigraphs{}))
@@ -74,22 +76,23 @@ classdef FeatureExtractor
 			
 		end
 		
-		function [pp,pr,rp,rr] = getRefLats(occurIndices, keystrokes)
-			pp = zeros(1, length(occurIndices));
-			pr = zeros(1, length(occurIndices));
-			rp = zeros(1, length(occurIndices));
-			rr = zeros(1, length(occurIndices));
+		function [pps,prs,rps,rrs] = getRefLats(occurIndices, keystrokes)
+			pps = zeros(1, length(occurIndices));
+			prs = zeros(1, length(occurIndices));
+			rps = zeros(1, length(occurIndices));
+			rrs = zeros(1, length(occurIndices));
 			
 			for jj = 1:length(occurIndices)
 				% todo: avoid using this if statement inside loop.
 				if occurIndices(jj) ~= length(keystrokes)
 					digraphRow = keystrokes(occurIndices(jj),:);
 					nextRow = keystrokes(occurIndices(jj)+1,:);
-					lats = calcLats(digraphRow, nextRow);
-					pp(jj) = lats(1);
-					pr(jj) = lats(2);
-					rp(jj) = lats(3);
-					rr(jj) = lats(4);
+					[pp,pr,rp,rr] = ... 
+						FeatureExtractor.calcLats(digraphRow, nextRow);
+					pps(jj) = pp;
+					prs(jj) = pr;
+					rps(jj) = rp;
+					rrs(jj) = rr;
 				end
 			end
 		end
@@ -104,87 +107,13 @@ classdef FeatureExtractor
 				pr = digraphRow{2} + digraphRow{4}+nextRow{2};
 				rp = digraphRow{4};
 				rr = digraphRow{4} + nextRow{2};
+			else
+				pp = NaN;
+				pr = NaN;
+				rp = NaN;
+				rr = NaN;
 			end
 		end
-		
-		%{
-		function digraphActions = extractDigraphActions(keystrokes)
-			% Convert keystroke structure to a table due to unique()
-			% not supporting combinations of cellarray columns
-			uniqueDigraphsTable = unique(cell2table( ... 
-				keystrokes(:,[1 3])), 'rows');
-			uniqueDigraphs = table2cell(uniqueDigraphsTable);
-			
-			% Ignore rows with 'BREAK' in column 4, as this symbolizes a
-			% pause in keystroke recording.
-			% withoutBreak = uniqueDigraphs( ... 
-			%	find(~strcmp(uniqueDigraphs(:,2), 'BREAK')), :);
-			
-			% Pre-allocate memory for cell array
-			digraphActions = cell(length(uniqueDigraphs),6);
-			
-			digraphActions(:, 1:2) = uniqueDigraphs(:, 1:2);
-
-			for ii = 1:length(uniqueDigraphs)
-				% Find rows containing the current unique digraph
-				occurrenceIndices = find( ...
-					strcmp(keystrokes(:,1), uniqueDigraphs{ii,1}) & ...
-					strcmp(keystrokes(:,3), uniqueDigraphs{ii,2}) & ...
-					cell2mat(keystrokes(:,2)) < 100000 & ...
-					cell2mat(keystrokes(:,4)) < 2000);
-				%Maybe check here if the nextkey is correct.
-			end
-			
-				occurrences = keystrokes(occurrenceIndices, :);
-				
-				% Preallocate memory for the four different latencies to be
-				% calculated for every occurrence of the current digraph.
-				%[pp, pr, rp, rr] = zeros(1, length(occurrenceIndices));
-				pp = zeros(1, length(occurrenceIndices));
-				pr = zeros(1, length(occurrenceIndices));
-				rp = zeros(1, length(occurrenceIndices));
-				rr = zeros(1, length(occurrenceIndices));
-				
-				for jj = 1:length(occurrenceIndices)
-					digraphRow = keystrokes(occurrenceIndices(jj),:);
-					nextRow = keystrokes(occurrenceIndices(jj)+1,:);
-					%rpLatency = keystrokes{occurrenceIndices(jj),4};
-					rpLatency = digraphRow{4};
-					% Check if the first key in the next row is the correct
-					% one. If not, the behavior logging tool may have been
-					% paused at that point, or some error may have occurred
-					% during keystroke logging.
-					nextKeyIsCorrect = strcmp(digraphRow{3}, nextRow{1});
-					if nextKeyIsCorrect && rpLatency < 2000
-						%{
-						pp = [pp digraphRow{2} + digraphRow{4}];
-						pr = [pr digraphRow{2} + digraphRow{4}+nextRow{2}];
-						rp = [rp rpLatency];
-						rr = [rr digraphRow{4} + nextRow{2}];
-						%}
-						pp(jj) = digraphRow{2} + digraphRow{4};
-						pr(jj) = digraphRow{2} + digraphRow{4}+nextRow{2};
-						rp(jj) = rpLatency;
-						rr(jj) = digraphRow{4} + nextRow{2};
-					end
-				end
-				%validDigraphs = occurrences((occurrences{:,4}- ...
-				%	occurrences{:,2})<2000);
-				%if 
-				digraphActions{ii,3} = pp;
-				digraphActions{ii,4} = pr;
-				digraphActions{ii,5} = rp;
-				digraphActions{ii,6} = rr;
-			end
-			
-			digraphActions = uniqueDigraphs;
-			
-			%indices = find(strcmp(keystrokes(:,1), ...
-			%	uniqueDigraphs{}))
-			
-		end
-		%}
-		
 	end
 end
 
