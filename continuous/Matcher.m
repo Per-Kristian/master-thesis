@@ -30,25 +30,44 @@ classdef Matcher < handle
 		
 		function score = getSimpleMonoScore(obj, probe)
 			index = find(strcmp(obj.monoRef(:,1), probe{1}));
-			refRow = obj.monoRef(index, :);
-			refMean = refRow{3};
-			refStd = refRow{4};
-			
-			score = abs(probe{2}-refMean)/refStd;
+			%If there are no occurrences in reference, return -2
+			if isempty(index)
+				score = -2;
+			else
+				refRow = obj.monoRef(index, :);
+				% If there is only one occurrence in the reference, there
+				% exists no standard deviation, and distance can't be
+				% calculated. Return -1 to indicate this.
+				if length(refRow{2}) == 1
+					score = -1;
+				else
+					refMean = refRow{3};
+					refStd = refRow{4};
+					score = abs(probe{2}-refMean)/refStd;
+				end
+			end
 		end
 		
 		function score = getSimpleDiScore(obj, probe)
 			index = find(strcmp(obj.diRef(:,1), probe{1}) && ...
 				strcmp(obj.diRef(:,2), probe{3}));
-			refRow = obj.diRef(index, :);
-			latMeans = refRow{7};
-			latStds = refRow{8};
-			ppDist = (abs(probe{3}-latMeans(1)))/latStds(1);
-			prDist = (abs(probe{4}-latMeans(2)))/latStds(2);
-			rpDist = (abs(probe{5}-latMeans(3)))/latStds(3);
-			rrDist = (abs(probe{6}-latMeans(4)))/latStds(4);
-			
-			score = (ppDist + prDist + rpDist + rrDist) / 4;
+			if isempty(index)
+				score = -2;
+			else
+				refRow = obj.diRef(index, :);
+				if refRow{3} == 1
+					score = -1;
+				else
+					latMeans = refRow{7};
+					latStds = refRow{8};
+					ppDist = (abs(probe{3}-latMeans(1)))/latStds(1);
+					prDist = (abs(probe{4}-latMeans(2)))/latStds(2);
+					rpDist = (abs(probe{5}-latMeans(3)))/latStds(3);
+					rrDist = (abs(probe{6}-latMeans(4)))/latStds(4);
+					
+					score = (ppDist + prDist + rpDist + rrDist) / 4;
+				end
+			end
 		end
 		
 		function score = getDiScore(obj, probe)

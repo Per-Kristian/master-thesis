@@ -32,7 +32,7 @@ classdef FeatureExtractor
 			[uStrings, iStrings, iUniq] = unique(string(Strings), 'rows');
 			Values = cell2mat(keystrokes(:, [2, 4]));
 			% todo Do we really need to check duration here? remDur.
-			validValues = (Values(:, 1) < 100000 & Values(:, 2) < 1500);
+			validValues = Values(:, 2) < 1500;
 			%validValues = (Values(:, 1) < 100000);
 			
 			% Pre-allocate memory for cell array
@@ -56,7 +56,8 @@ classdef FeatureExtractor
 					[nanstd(pp),nanstd(pr),nanstd(rp),nanstd(rr)];
 			end
 			% remove rows without valid latencies
-			digraphActions(isnan(digraphActions{:,7}),:)=[];
+			meanCol = cell2mat(digraphActions(:,7));
+			digraphActions = digraphActions(~any(isnan(meanCol),2),:);
 			
 			%indices = find(strcmp(keystrokes(:,1), ...
 			%	uniqueDigraphs{}))
@@ -73,7 +74,6 @@ classdef FeatureExtractor
 			probe{4} = lats(2);
 			probe{5} = lats(3);
 			probe{6} = lats(4);
-			
 		end
 		
 		function [pps,prs,rps,rrs] = getRefLats(occurIndices, keystrokes)

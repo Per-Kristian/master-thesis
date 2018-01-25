@@ -8,19 +8,28 @@ classdef TrustModel < handle
 		B
 		C
 		D
+		missingScore
+		singleOccScore
 	end
 	
 	methods
-		function obj = TrustModel(threshold, width, maxRwrd, maxPen)
+		function obj = TrustModel(threshold, width, maxRwrd, maxPen, ...
+				singleOccScore, missingScore)
 			%TRUSTMODEL Construct an instance of this class
 			%	Params: 
 			%	threshold = reward/penalty threshold, B = width,
-			%	C = max reward, D = max penalty
+			%	C = max reward, D = max penalty, missingScore = fixed 
+			%	dissimilarity score for probe not present in reference, 
+			%	singleOccScore = fixed dissimilarity score for only one 
+			%	occurrence of probe in reference.
+			
 			obj.trust = 100;
 			obj.A = threshold;
 			obj.B = width;
 			obj.C = maxRwrd;
 			obj.D = maxPen;
+			obj.singleOccScore = singleOccScore;
+			obj.missingScore = missingScore;
 		end
 		
 		function newTrust = alterTrust(obj, score)
@@ -28,8 +37,14 @@ classdef TrustModel < handle
 			%   Takes a dissimilarity score (number of standard
 			%   deviations) as input. Calculates a change of trust and sets
 			%   the new trust level accordingly. Returns new trust level.
-			
-			numerator = obj.D .* (1+1 ./ obj.C);
+			%	If the score parameter is -1 or -2, change it to fixed a
+			%	fixed score for edge cases.
+			if score == -1
+				score = obj.singleOccScore;
+			elseif score == -2
+				score = obj.missingScore;
+			end
+			numerator = obj.D .* (1 + 1 ./ obj.C);
 			denominator = (1 ./ obj.C)+exp((score-obj.A) ./ obj.B);
 			frac = numerator./denominator;
 			
