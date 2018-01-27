@@ -10,26 +10,28 @@ classdef TrustModel < handle
 		D
 		missingScore
 		singleOccScore
+		lockoutThresh
 	end
 	
 	methods
-		function obj = TrustModel(threshold, width, maxRwrd, maxPen, ...
-				singleOccScore, missingScore)
+		function obj = TrustModel(params)
 			%TRUSTMODEL Construct an instance of this class
 			%	Params: 
 			%	threshold = reward/penalty threshold, B = width,
 			%	C = max reward, D = max penalty, missingScore = fixed 
 			%	dissimilarity score for probe not present in reference, 
 			%	singleOccScore = fixed dissimilarity score for only one 
-			%	occurrence of probe in reference.
+			%	occurrence of probe in reference, lockoutThresh = threshold
+			%	for locking out the imposter.
 			
 			obj.trust = 100;
-			obj.A = threshold;
-			obj.B = width;
-			obj.C = maxRwrd;
-			obj.D = maxPen;
-			obj.singleOccScore = singleOccScore;
-			obj.missingScore = missingScore;
+			obj.A = params.threshold;
+			obj.B = params.width;
+			obj.C = params.maxRwrd;
+			obj.D = params.maxPen;
+			obj.singleOccScore = params.singleOccScore;
+			obj.missingScore = params.missingScore;
+			obj.lockoutThresh = params.lockoutThresh;
 		end
 		
 		function newTrust = alterTrust(obj, score)
@@ -44,10 +46,13 @@ classdef TrustModel < handle
 			elseif score == -2
 				score = obj.missingScore;
 			end
+			% Reset trust level to 100 if it has dropped below lockout.
+			if obj.trust < obj.lockoutThresh
+				obj.trust = 100;
+			end
 			numerator = obj.D .* (1 + 1 ./ obj.C);
 			denominator = (1 ./ obj.C)+exp((score-obj.A) ./ obj.B);
 			frac = numerator./denominator;
-			
 			delta = min(-obj.D + frac, obj.C);
 			obj.trust = min(max(obj.trust + delta, 0), 100);
 			newTrust = obj.trust;
