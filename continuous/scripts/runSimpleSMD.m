@@ -49,8 +49,9 @@ end
 		trustModel = TrustModel(params);
 		trustProgress = zeros(testLength, 1, 'int8');
 		for jj = 1:testLength
-			probe = testSet(jj, 1:2);
-			score = matcher.getSimpleMonoScore(probe);
+			monoProbe = testSet(jj, 1:2);
+			score = matcher.getSimpleMonoScore(monoProbe);
+			% Check previous row
 			newTrust = trustModel.alterTrust(score);
 			trustProgress(jj) = newTrust;
 		end

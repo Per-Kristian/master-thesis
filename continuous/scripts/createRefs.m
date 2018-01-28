@@ -6,9 +6,15 @@ dipath = '../../../Data/filtered/DigraphFeatures/';
 
 monoFeatures = FeatureExtractor.extractSingleActions(keystrokes);
 toFile = sprintf(strcat(monopath, 'User_%02d.mat'), user);
+if ~isdir(monopath)
+	mkdir(monopath);
+end
 save(toFile, 'monoFeatures');
 
 diFeatures = FeatureExtractor.extractDigraphActions(keystrokes);
 toFile = sprintf(strcat(dipath, 'User_%02d.mat'), user);
+if ~isdir(dipath)
+	mkdir(dipath);
+end
 save(toFile, 'diFeatures');
 end

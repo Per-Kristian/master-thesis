@@ -26,10 +26,16 @@ end
 		lastValidRow = lastTrainingRow + int32(floor(validPtn*kslength));
 		validSubset = keystrokes(lastTrainingRow+1:lastValidRow, :);
 		toFile = sprintf(strcat(validPath, 'User_%02d.mat'), user);
+		if ~isdir(validPath)
+			mkdir(validPath);
+		end
 		save(toFile, 'validSubset');
 		
 		testSubset = keystrokes(lastValidRow+1:end, :);
 		toFile = sprintf(strcat(testingPath, 'User_%02d.mat'), user);
+		if ~isdir(testingPath)
+			mkdir(testingPath);
+		end
 		save(toFile, 'testSubset');
 	end
 toc
