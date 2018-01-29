@@ -1,14 +1,18 @@
-function [monoRef, diRef] = fetchRefs(user)
+function [monoRef, diRef] = fetchRef(user)
 %FETCHREF Fetches references for specific user.
 %	Returns both Monograph and Digraph references.
-%	[m, d] = fetchRefs(3) returns mono- and digraph references for user 3.
+%	[m, d] = fetchRef(3) returns mono- and digraph references for user 3.
 
-monoPath = '../../../Data/filtered/MonographFeatures/';
-diPath = '../../../Data/filtered/DigraphFeatures/';
+monoPath = 'Data/filtered/MonographFeatures/';
+diPath = 'Data/filtered/DigraphFeatures/';
 
 fromFile = sprintf(strcat(monoPath, 'User_%02d.mat'), user);
-monoRef = importdata(fromFile);
+if exist(fromFile, 'file') == 2
+	monoRef = importdata(fromFile);
+end
 fromFile = sprintf(strcat(diPath, 'User_%02d.mat'), user);
-diRef = importdata(fromFile);
+if exist(fromFile, 'file') == 2
+	diRef = importdata(fromFile);
+end
 end
 

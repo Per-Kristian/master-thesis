@@ -49,13 +49,13 @@ classdef Matcher < handle
 		end
 		
 		function score = getSimpleDiScore(obj, probe)
-			index = find(strcmp(obj.diRef(:,1), probe{1}) && ...
-				strcmp(obj.diRef(:,2), probe{3}));
+			index = find(strcmp(obj.diRef(:,1), probe{1}) & ...
+				strcmp(obj.diRef(:,2), probe{2}));
 			if isempty(index)
 				score = -2;
 			else
 				refRow = obj.diRef(index, :);
-				if refRow{3} == 1
+				if length(refRow{3}) == 1
 					score = -1;
 				else
 					latMeans = refRow{7};

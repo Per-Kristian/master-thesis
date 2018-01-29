@@ -7,6 +7,10 @@ classdef FeatureExtractor
 		digraphs
 	end
 	
+	properties (Constant)
+		maxFlightTime = 1500
+	end
+	
 	methods (Static)
 		function singleActions = extractSingleActions(keystrokes)
 			%METHOD1 Summary of this method goes here
@@ -32,7 +36,7 @@ classdef FeatureExtractor
 			[uStrings, iStrings, iUniq] = unique(string(Strings), 'rows');
 			Values = cell2mat(keystrokes(:, [2, 4]));
 			% todo Do we really need to check duration here? remDur.
-			validValues = Values(:, 2) < 1500;
+			validValues = Values(:, 2) < FeatureExtractor.maxFlightTime;
 			%validValues = (Values(:, 1) < 100000);
 			
 			% Pre-allocate memory for cell array
@@ -65,15 +69,19 @@ classdef FeatureExtractor
 		end
 		
 		function probe = createDiProbe(digraphRow, nextRow)
-			probe = cell(6);
+			%CREATEDIPROBE Creates a digraph probe.
+			%	The digraphRow parameter is expected to be the row
+			%	containing BOTH characters in the digraph. nextRow is the
+			%	row after, which is needed to calculate latencies.
+			probe = cell(1,6);
 			probe{1} = digraphRow{1};
 			probe{2} = digraphRow{3};
 			
-			lats = calcLats(digraphRow, nextRow);
-			probe{3} = lats(1);
-			probe{4} = lats(2);
-			probe{5} = lats(3);
-			probe{6} = lats(4);
+			[pp,pr,rp,rr] = FeatureExtractor.calcLats(digraphRow, nextRow);
+			probe{3} = pp;
+			probe{4} = pr;
+			probe{5} = rp;
+			probe{6} = rr;
 		end
 		
 		function [pps,prs,rps,rrs] = getRefLats(occurIndices, keystrokes)
