@@ -17,8 +17,9 @@ params.maxPen = 1;
 params.singleOccScore = 3;
 params.missingScore = 3.3;
 params.lockout = 90;
+params.type = 'simpleSMD';
 
-Runner.run(user, imposter, params, 'simple_smd');
+Runner.run(user, imposter, params);
 
 toc
 end

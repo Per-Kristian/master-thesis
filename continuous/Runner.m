@@ -3,42 +3,41 @@ classdef Runner
 	%   Detailed explanation goes here
 	
 	methods (Static)
-		function run(user, imposter, params, version)
+		function run(user, imposter, params)
 			if strcmp(user, 'all')
-				Runner.allUsers(genOrAll, params, version)
+				Runner.allUsers(genOrAll, params)
 			else
-				Runner.singleUser(user, imposter, params, version);
+				Runner.singleUser(user, imposter, params);
 			end
 		end
 		
-		function allUsers(imposter, params, version)
+		function allUsers(imposter, params)
 			for currUser = 1:57
 				if strcmp(imposter, 'all')
 					for currImposter = 1:57
 						Runner.simulate(currUser, ... 
-							currImposter, params, version);
+							currImposter, params);
 					end
 				else
-					Runner.simulate(currUser, imposter, params, version);
+					Runner.simulate(currUser, imposter, params);
 				end
 			end
 		end
 		
-		function singleUser(user, imposter, params, version)
+		function singleUser(user, imposter, params)
 			if strcmp(imposter, 'all')
 				for currImposter = 1:57
-					Runner.simulate(user, currImposter, params, version);
+					Runner.simulate(user, currImposter, params);
 				end
 			else
-				Runner.simulate(user, imposter, params, version);
+				Runner.simulate(user, imposter, params);
 			end
 		end
 		
-		function simulate(user, imposter, params, version)
+		function simulate(user, imposter, params)
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
 			testPath = 'Data/filtered/testing/';
-			resPath = strcat('Data/results/', version, '/');
 			
 			matcher = Matcher;
 			[monoRef, diRef] = fetchRef(user);
@@ -50,17 +49,8 @@ classdef Runner
 			testLength = length(testSet);
 			trustModel = TrustModel(params);
 			trustProgress = zeros(testLength, 1);
-			
-			% First check the first monograph, as it cannot be the second
-			% key of a digraph.
-			%{
-			probe = testSet(1,:);
-			score = matcher.getSimpleMonoScore(probe(1:2));
-			newTrust = trustModel.alterTrust(score);
-			trustProgress(1) = newTrust;
-			%}
-			
 			prevRow = {[], [], [], []};
+			
 			for jj = 1:testLength
 				currRow = testSet(jj,:);
 				score = matcher.getSimpleMonoScore(currRow(1:2));
@@ -80,14 +70,22 @@ classdef Runner
 				end
 				prevRow = currRow;
 			end
+			%{
+			results = calcResults(trustProgress);
+			% todo: Write to params table here? Send params.type to
+			% fileIO?
+			FileIO.writeResult(user, imposter, params, ...
+				trustProgress, results);
+			%}
+		end
 			
-			userResFolder = sprintf(strcat(resPath, 'User_%02d/'), user);
-			impFolder = sprintf(strcat(userResFolder, 'User_%02d/'), imposter);
-			if ~isdir(impFolder)
-				mkdir(impFolder);
+		function results = calcResults(trustProgress)
+			indices = find(trustProgress < 90);
+			if length(indices) == 1
+				avgActions = indices(1);
+			else 
+				avgActions = mean(diff(indices));
 			end
-			toFile = strcat(impFolder, 'trustProgress.mat');
-			save(toFile, 'trustProgress');
 		end
 	end
 end
