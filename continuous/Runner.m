@@ -35,12 +35,13 @@ classdef Runner < handle
 			% lastRow is gradually increased in loop.
 			lastRow = 0;
 			for currUser = 1:57
-				currAvgVals = zeros(57);
+				currAvgVals = zeros(57,2);
 				if strcmp(obj.imposter, 'all')
 					for currImposter = 1:57
 						[avgActions, trustProgress] = ...
 							obj.simulate(currUser, currImposter);
-						currAvgVals(currImposter) = avgActions;
+						currAvgVals(currImposter,:) = ...
+							[avgActions, length(trustProgress)];
 						%FileIO.writeSingResult(obj.user, currImposter, ... 
 						%	obj.paramsID, trustProgress);
 						
@@ -51,11 +52,17 @@ classdef Runner < handle
 				else
 					obj.simulate(currUser, obj.imposter);
 				end
-				% Store current user's ANGA.
-				allGenVals(currUser) = currAvgVals(currUser);
+				% Store current user's ANGA. If they weren't locked out,
+				% use total number of keystrokes tested.
+				if currAvgVals(currUser,1) == -1
+					allGenVals(currUser) = currAvgVals(currUser,2);
+				else
+					allGenVals(currUser) = currAvgVals(currUser,1);
+				end
 				currAvgVals(currUser) = [];
 				allImpVals(lastRow+1:lastRow+56) = currAvgVals;
 				lastRow = lastRow + 56;
+				
 			end
 			
 		end
@@ -116,12 +123,19 @@ classdef Runner < handle
 			% being locked out.
 			%	Returns -1 if they are never locked out.
 			indices = find(trustProgress < 90);
-			if length(indices) == 1
-				avg = indices(1);
-			elseif isempty(indices)
+			
+			if isempty(indices)
 				avg = -1;
 			else
-				avg = mean(diff([0; indices]));
+				% Only include the keystrokes after the last lockout if it
+				% will pull the average number of actions UP.
+				avgWithoutEnd = mean(diff([0; indices]));
+				endLength = length(trustProgress)-indices(end);
+				if endLength <= avgWithoutEnd
+					avg = mean(diff([0; indices]));
+				else
+					avg = mean(diff([0; indices; length(trustProgress)]));
+				end
 			end
 		end
 	end
