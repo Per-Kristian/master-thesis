@@ -28,22 +28,36 @@ classdef Runner < handle
 	end
 	methods (Access = private)
 		function allUsers(obj)
+			allImpVals = zeros(57*56, 1);
+			allGenVals = zeros(57,1);
+			
+			
+			% lastRow is gradually increased in loop.
+			lastRow = 0;
 			for currUser = 1:57
+				currAvgVals = zeros(57);
 				if strcmp(obj.imposter, 'all')
 					for currImposter = 1:57
 						[avgActions, trustProgress] = ...
 							obj.simulate(currUser, currImposter);
-						FileIO.writeSingResult(obj.user, currImposter, ... 
-							obj.paramsID, trustProgress);
+						currAvgVals(currImposter) = avgActions;
+						%FileIO.writeSingResult(obj.user, currImposter, ... 
+						%	obj.paramsID, trustProgress);
 						
 						% Store all avgActions in an array.
 						% Take note of genuine run, use currUser.
-						% 
+						%
 					end
 				else
 					obj.simulate(currUser, obj.imposter);
 				end
+				% Store current user's ANGA.
+				allGenVals(currUser) = currAvgVals(currUser);
+				currAvgVals(currUser) = [];
+				allImpVals(lastRow+1:lastRow+56) = currAvgVals;
+				lastRow = lastRow + 56;
 			end
+			
 		end
 		
 		function [avgActions, trustProgress] = singleUser(obj)
