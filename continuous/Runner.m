@@ -5,7 +5,7 @@ classdef Runner
 	methods (Static)
 		function run(user, imposter, params)
 			if strcmp(user, 'all')
-				Runner.allUsers(genOrAll, params)
+				Runner.allUsers(imposter, params)
 			else
 				Runner.singleUser(user, imposter, params);
 			end
@@ -70,21 +70,25 @@ classdef Runner
 				end
 				prevRow = currRow;
 			end
-			%{
-			results = calcResults(trustProgress);
+			
+			avgActions = Runner.avgActions(trustProgress);
 			% todo: Write to params table here? Send params.type to
 			% fileIO?
 			FileIO.writeResult(user, imposter, params, ...
 				trustProgress, results);
-			%}
+			
 		end
 			
-		function results = calcResults(trustProgress)
+		function avg = avgActions(trustProgress)
+			% AVGACTIONS Calculates the average number of actions before
+			% being locked out.
+			%	Returns NaN if they are never locked out. Should be
+			%	transformed to NULL in database.
 			indices = find(trustProgress < 90);
 			if length(indices) == 1
-				avgActions = indices(1);
-			else 
-				avgActions = mean(diff(indices));
+				avg = indices(1);
+			else
+				avg = mean(diff([0; indices]));
 			end
 		end
 	end
