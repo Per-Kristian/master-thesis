@@ -8,14 +8,22 @@ classdef Runner < handle
 		imposter
 		params
 		paramsID
+		testSets
+		monoRefs
+		diRefs
 	end
 	
 	methods
-		function obj = Runner(user, imposter, params)
+		function obj = Runner(user, imposter, params, testSets,...
+				monoRefs, diRefs)
 			obj.db = DBAccess();
-			obj.paramsID = db.insertParams(params);
+			obj.paramsID = obj.db.insertParams(params);
 			obj.user = user;
 			obj.imposter = imposter;
+			obj.params = params;
+			obj.testSets = testSets;
+			obj.monoRefs = monoRefs;
+			obj.diRefs = diRefs;
 		end
 		
 		function run(obj)
@@ -27,14 +35,16 @@ classdef Runner < handle
 		end
 	end
 	methods (Access = private)
-		function allUsers(obj)
+		function results = allUsers(obj)
 			allImpVals = zeros(57*56, 1);
 			allGenVals = zeros(57,1);
+			tempResults = cell(4,2);
 			
-			
+			results = zeros(5,4);
 			% lastRow is gradually increased in loop.
 			lastRow = 0;
 			for currUser = 1:57
+				tic
 				currAvgVals = zeros(57,2);
 				if strcmp(obj.imposter, 'all')
 					for currImposter = 1:57
@@ -44,10 +54,6 @@ classdef Runner < handle
 							[avgActions, length(trustProgress)];
 						%FileIO.writeSingResult(obj.user, currImposter, ... 
 						%	obj.paramsID, trustProgress);
-						
-						% Store all avgActions in an array.
-						% Take note of genuine run, use currUser.
-						%
 					end
 				else
 					obj.simulate(currUser, obj.imposter);
@@ -56,15 +62,50 @@ classdef Runner < handle
 				% use total number of keystrokes tested.
 				if currAvgVals(currUser,1) == -1
 					allGenVals(currUser) = currAvgVals(currUser,2);
+					p1 = true;
 				else
 					allGenVals(currUser) = currAvgVals(currUser,1);
+					p1 = false;
 				end
-				currAvgVals(currUser) = [];
-				allImpVals(lastRow+1:lastRow+56) = currAvgVals;
-				lastRow = lastRow + 56;
+				%Remove ANGA from array.
+				currImpVals = currAvgVals;
+				currImpVals(currUser, :) = [];
+				impsNotLocked = currImpVals(currImpVals(:,1) == -1, :);
+				% True if all imposters are at some point locked out.
+				p2 = isempty(impsNotLocked);
 				
+				if p1 && p2
+					row = 1;
+				elseif p1 && ~p2
+					row = 2;
+					indices = find(currImpVals(:,1) == -1);
+					currImpVals(indices,1) = currImpVals(indices,2);
+				elseif ~p1 && p2
+					row = 3;
+				else
+					row = 4;
+					indices = find(currImpVals(:,1) == -1);
+					currImpVals(indices,1) = currImpVals(indices,2);
+				end
+				
+				impND = size(impsNotLocked,1);
+				allImpVals(lastRow+1:lastRow+56) = currImpVals(:,1);
+				lastRow = lastRow + 56;
+				% Increase number of users and imposters not detected for 
+				% the active category. (+/-)
+				results(row,1) = results(row,1) + 1;
+				results(row, 4) = results(row, 4) + impND;
+				%results{row, 1} = [ppGenVals; allGenVals(currUser)];
+				tempResults{row,1} = ... 
+					[tempResults{row,1}; allGenVals(currUser)];
+				tempResults{row,2} = [tempResults{row,2}; currImpVals(:,1)];
+				toc
 			end
-			
+			%Calc total ANIA/ANGA values
+			totVals = cellfun(@mean, tempResults);
+			results(1:4, 2:3) = totVals;
+			results(5,:) = [57, mean(allGenVals), mean(allImpVals),...
+				sum(results(:,4))];
 		end
 		
 		function [avgActions, trustProgress] = singleUser(obj)
@@ -85,14 +126,21 @@ classdef Runner < handle
 			testPath = 'Data/filtered/testing/';
 			
 			matcher = Matcher;
+			%{
 			[monoRef, diRef] = fetchRef(user);
 			fromFile = sprintf(strcat(testPath,'User_%02d.mat'), imposter);
 			testSet = importdata(fromFile);
+			%}
+			userName = sprintf('User_%02d', user);
+			monoRef = obj.monoRefs.(userName);
+			diRef = obj.diRefs.(userName);
+			imposterName = sprintf('User_%02d', imposter);
+			testSet = obj.testSets.(imposterName);
 			
 			matcher.monoRef = monoRef;
 			matcher.diRef = diRef;
 			testLength = length(testSet);
-			trustModel = TrustModel(obj.paramsID);
+			trustModel = TrustModel(obj.params);
 			trustProgress = zeros(testLength, 1);
 			prevRow = {[], [], [], []};
 			
