@@ -2,18 +2,17 @@ classdef FileIO
 	%FILEIO This class contains static methods for I/O.
 	
 	methods (Static)
-		%{
-		function obj = FileIO(inputArg1,inputArg2)
-			%FILEIO Construct an instance of this class
-			%   Detailed explanation goes here
-			obj.Property1 = inputArg1 + inputArg2;
-		end
-		%}
-		
 		function testSet = readTestSet(imposter)
 			testPath = 'Data/filtered/testing/';
 			fromFile = sprintf(strcat(testPath,'User_%02d.mat'), imposter);
 			testSet = importdata(fromFile);
+		end
+		
+		function writeRefs(user, monoRef, diRef)
+			monopath = '../../../Data/filtered/MonographFeatures/';
+			dipath = '../../../Data/filtered/DigraphFeatures/';
+			
+			toFile = sprintf(strcat(monopath, 'User_%02d.mat'), user);
 		end
 		
 		function [monoRef, diRef] = readRefs(user)
@@ -46,6 +45,17 @@ classdef FileIO
 			end
 			toFile = strcat(impFolder, 'trustProgress.mat');
 			save(toFile, 'trustProgress');
+		end
+		
+		function rawData = readRawData(user)
+			filename = sprintf('Data/raw/User_%02d.mat', user);
+			rawData = importdata(filename);
+		end
+		
+		function saveFilteredData(user, data)
+			filename = ... 
+				sprintf('/Data/filtered/User_%02d.mat', user);
+			save(filename, 'data');
 		end
 		
 		function pwd = getPassword()
