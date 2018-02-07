@@ -1,3 +1,3 @@
-filterData;
-createRefs;
+%filterData;
+separateData('all');
 prep;
