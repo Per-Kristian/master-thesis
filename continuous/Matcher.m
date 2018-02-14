@@ -54,7 +54,7 @@ classdef Matcher < handle
 			if isempty(index)
 				score = -2;
 			else
-				refRow = obj.diRef(index, :);
+				refRow = obj.diRef(index, :);	
 				if length(refRow{3}) == 1
 					score = -1;
 				else

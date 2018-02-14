@@ -11,6 +11,8 @@ classdef Runner < handle
 		testSets
 		monoRefs
 		diRefs
+		numUsers
+		numImps
 	end
 	
 	methods
@@ -24,6 +26,8 @@ classdef Runner < handle
 			obj.testSets = testSets;
 			obj.monoRefs = monoRefs;
 			obj.diRefs = diRefs;
+			obj.numUsers = numel(fieldnames(testSets));
+			obj.numImps = obj.numUsers-1;
 		end
 		
 		function run(obj)
@@ -36,24 +40,26 @@ classdef Runner < handle
 	end
 	methods (Access = private)
 		function results = allUsers(obj)
-			allImpVals = zeros(57*56, 1);
-			allGenVals = zeros(57,1);
+			allImpVals = zeros(obj.numUsers*obj.numImps, 1);
+			allGenVals = zeros(obj.numUsers,1);
 			tempResults = cell(4,2);
 			
 			results = zeros(5,4);
 			% lastRow is gradually increased in loop.
 			lastRow = 0;
-			for currUser = 1:57
+			for currUser = 1:obj.numUsers
 				tic
-				currAvgVals = zeros(57,2);
+				fprintf('Processing user %d..\n', currUser);
+				currAvgVals = zeros(obj.numUsers,2);
 				if strcmp(obj.imposter, 'all')
-					for currImposter = 1:57
+					for currImposter = 1:obj.numUsers
 						[avgActions, trustProgress] = ...
 							obj.simulate(currUser, currImposter);
 						currAvgVals(currImposter,:) = ...
 							[avgActions, length(trustProgress)];
-						%FileIO.writeSingResult(obj.user, currImposter, ... 
-						%	obj.paramsID, trustProgress);
+						FileIO.writeSingleResult(currUser, currImposter, ... 
+							obj.params.type, obj.paramsID, ...
+							obj.numUsers, trustProgress, avgActions);
 					end
 				else
 					obj.simulate(currUser, obj.imposter);
@@ -89,8 +95,8 @@ classdef Runner < handle
 				end
 				
 				impND = size(impsNotLocked,1);
-				allImpVals(lastRow+1:lastRow+56) = currImpVals(:,1);
-				lastRow = lastRow + 56;
+				allImpVals(lastRow+1:lastRow+obj.numImps) = currImpVals(:,1);
+				lastRow = lastRow + obj.numImps;
 				% Increase number of users and imposters not detected for 
 				% the active category. (+/-)
 				results(row,1) = results(row,1) + 1;
@@ -104,13 +110,14 @@ classdef Runner < handle
 			%Calc total ANIA/ANGA values
 			totVals = cellfun(@mean, tempResults);
 			results(1:4, 2:3) = totVals;
-			results(5,:) = [57, mean(allGenVals), mean(allImpVals),...
-				sum(results(:,4))];
+			results(5,:) = [obj.numUsers, mean(allGenVals), ... 
+				mean(allImpVals), sum(results(:,4))];
+			obj.db.insertResults(results, obj.paramsID);
 		end
 		
 		function [avgActions, trustProgress] = singleUser(obj)
 			if strcmp(obj.imposter, 'all')
-				for currImposter = 1:57
+				for currImposter = 1:obj.numUsers
 					[avgActions, trustProgress] = ... 
 						obj.simulate(obj.user, currImposter);
 				end
@@ -123,14 +130,7 @@ classdef Runner < handle
 		function [avgActions,trustProgress] = simulate(obj, user, imposter)
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
-			testPath = 'Data/filtered/testing/';
-			
 			matcher = Matcher;
-			%{
-			[monoRef, diRef] = fetchRef(user);
-			fromFile = sprintf(strcat(testPath,'User_%02d.mat'), imposter);
-			testSet = importdata(fromFile);
-			%}
 			userName = sprintf('User_%02d', user);
 			monoRef = obj.monoRefs.(userName);
 			diRef = obj.diRefs.(userName);
@@ -170,7 +170,7 @@ classdef Runner < handle
 			% AVGACTIONS Calculates the average number of actions before
 			% being locked out.
 			%	Returns -1 if they are never locked out.
-			indices = find(trustProgress < 90);
+			indices = find(trustProgress < obj.params.lockout);
 			
 			if isempty(indices)
 				avg = -1;

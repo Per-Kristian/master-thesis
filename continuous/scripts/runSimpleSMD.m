@@ -10,12 +10,12 @@ function runSimpleSMD(user, imposter, testSets, monoRefs, diRefs)
 %	genuine user.
 
 tic
-params.rwrdThreshold = 2;
-params.width = 0.35;
+params.rwrdThreshold = 1.85;
+params.width = 0.15;
 params.maxRwrd = 1;
 params.maxPen = 1;
-params.singleOccScore = 3;
-params.missingScore = 3.3;
+params.singleOccScore = 2;
+params.missingScore = 2.3;
 params.lockout = 90;
 params.type = 'simpleSMD';
 
