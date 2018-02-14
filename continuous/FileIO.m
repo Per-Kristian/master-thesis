@@ -70,18 +70,19 @@ classdef FileIO
 		end
 		
 		function writeSingleResult(user, imposter, ... 
-				type, paramID, trustProgress) %#ok<INUSD>
+				type, paramID, numUsers, trustProgress, avgActions) %#ok<INUSD>
 			%METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
-			resPath = fullfile(FileIO.PRESULTS,type,sprinft('/%d/',paramID));
+			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d/', ... 
+				paramID, numUsers));
 			userResFolder = sprintf(fullfile(resPath, 'User_%02d/'), user);
 			impFolder = sprintf(fullfile(userResFolder, ... 
 				'User_%02d/'), imposter);
 			if ~isdir(impFolder)
 				mkdir(impFolder);
 			end
-			toFile = strcat(impFolder, 'trustProgress.mat');
-			save(toFile, 'trustProgress');
+			toFile = strcat(impFolder, 'result.mat');
+			save(toFile, 'avgActions');
 		end
 		
 		function rawData = readRawData(user)
