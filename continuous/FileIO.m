@@ -14,13 +14,13 @@ classdef FileIO
 	
 	methods (Static)
 		function testSet = readTestSet(imposter)
-			fromFile = ... 
-				sprintf(fullfile(FileIO.PTEST,'User_%02d.mat'),imposter);
+			fromFile = ...
+				fullfile(FileIO.PTEST,sprintf('User_%02d.mat',imposter));
 			testSet = importdata(fromFile);
 		end
 		
 		function writeTestSet(user, keystrokes) %#ok<INUSD>
-			toFile = sprintf(fullfile(FileIO.PTEST,'User_%02d.mat'),user);
+			toFile = fullfile(FileIO.PTEST,sprintf('User_%02d.mat',user));
 			if ~isdir(FileIO.PTEST)
 				mkdir(FileIO.PTEST);
 			end
@@ -28,7 +28,7 @@ classdef FileIO
 		end
 		
 		function writeValidationSet(user, keystrokes) %#ok<INUSD>
-			toFile = sprintf(fullfile(FileIO.PVALID,'User_%02d.mat'),user);
+			toFile = fullfile(FileIO.PVALID,sprintf('User_%02d.mat',user));
 			if ~isdir(FileIO.PVALID)
 				mkdir(FileIO.PVALID);
 			end
@@ -36,12 +36,12 @@ classdef FileIO
 		end
 		
 		function writeRefs(user, monoRef, diRef) %#ok<INUSD>
-			toFile = sprintf(fullfile(FileIO.PMONO,'User_%02d.mat'), user);
+			toFile = fullfile(FileIO.PMONO,sprintf('User_%02d.mat',user));
 			if ~isdir(FileIO.PMONO)
 				mkdir(FileIO.PMONO);
 			end
 			save(toFile, 'monoRef');
-			toFile = sprintf(fullfile(FileIO.PDI,'User_%02d.mat'), user);
+			toFile = fullfile(FileIO.PDI,sprintf('User_%02d.mat',user));
 			if ~isdir(FileIO.PDI)
 				mkdir(FileIO.PDI);
 			end
@@ -52,12 +52,11 @@ classdef FileIO
 			%	Returns both Monograph and Digraph references.
 			%	[m, d] = fetchRef(3) returns mono- and digraph references
 			%	for user 3.
-			
-			fromFile = sprintf(fullfile(FileIO.PMONO,'User_%02d.mat'),user);
+			fromFile = fullfile(FileIO.PMONO,sprintf('User_%02d.mat',user));
 			if exist(fromFile, 'file') == 2
 				monoRef = importdata(fromFile);
 			end
-			fromFile = sprintf(fullfile(FileIO.PDI,'User_%02d.mat'), user);
+			fromFile = fullfile(FileIO.PDI,sprintf('User_%02d.mat', user));
 			if exist(fromFile, 'file') == 2
 				diRef = importdata(fromFile);
 			end
@@ -75,9 +74,10 @@ classdef FileIO
 			%   Detailed explanation goes here
 			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d/', ... 
 				paramID, numUsers));
-			userResFolder = sprintf(fullfile(resPath, 'User_%02d/'), user);
-			impFolder = sprintf(fullfile(userResFolder, ... 
-				'User_%02d/'), imposter);
+			userResFolder = fullfile(resPath, ... 
+				sprintf('User_%02d.mat',user));
+			impFolder = fullfile(userResFolder, ... 
+				sprintf('User_%02d.mat',imposter));
 			if ~isdir(impFolder)
 				mkdir(impFolder);
 			end
@@ -95,7 +95,7 @@ classdef FileIO
 				mkdir(FileIO.PFILTERED);
 			end
 			filename = ... 
-				strcat(FileIO.PFILTERED, sprintf('/User_%02d.mat', user));
+				fullfile(FileIO.PFILTERED,sprintf('/User_%02d.mat', user));
 			save(filename, 'data');
 		end
 		
@@ -103,7 +103,7 @@ classdef FileIO
 			%GETPASSWORD returns the database password.
 			%	Pwd is simply read from a file outside of the repo's scope, 
 			%	preventing sneaky GitHub lurkers from gettin' jiggy wit it.
-			pwd = importdata('db/password.mat');
+			pwd = importdata(fullfile(FileIO.PROOT,'db/password.mat'));
 		end
 	end
 end
