@@ -16,7 +16,7 @@ classdef Matcher < handle
 		
 		function obj = Matcher(varargin)
 			%MATCHER Construct an instance of this class
-			%   Expects a reference formatted by FeatureExtractor.
+			%   Expects references formatted by FeatureExtractor.
 			if nargin>0
 				obj.monoRef = varargin{1};
 				obj.diRef = varargin{2};
@@ -68,6 +68,17 @@ classdef Matcher < handle
 					score = (ppDist + prDist + rpDist + rrDist) / 4;
 				end
 			end
+		end
+		
+		function score = fastSimpleDiScores(obj, probeSet)
+			%FASTSIMPLEDISCORES Returns all digraph scores for an entire
+			%probe set.
+			%	This function is used for calculating scores over the test
+			%	s
+		end
+		
+		function allDiScores = getAllDiScores()
+			
 		end
 		
 		function score = getDiScore(obj, probe)
@@ -122,6 +133,7 @@ classdef Matcher < handle
 		function set.diRef(obj, diRefIn)
 			obj.diRef = diRefIn;
 		end
+		
 	end
 end
 
