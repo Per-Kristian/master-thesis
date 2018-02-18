@@ -9,4 +9,4 @@ for ii = 1:numFiles
 	userName = sprintf('User_%02d', ii);
 	testSets.(userName) = FileIO.readTestSet(ii);
 end
-clearvars ii numFiles userName;
+clearvars -except diRefs monoRefs testSets;
