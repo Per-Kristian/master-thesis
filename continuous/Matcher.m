@@ -28,6 +28,23 @@ classdef Matcher < handle
 			score = 1-(meanDist-minDist)/(maxDist-minDist);
 		end
 		
+		function scores = preCalcSimpleSMDScores(obj,probeSet)
+			setLength = length(probeSet);
+			scores = NaN(setLength,2);
+			prevRow = {[], [], [], []};
+			for jj = 1:setLength
+				currRow = probeSet(jj,:);
+				scores(jj,1) = obj.getSimpleMonoScore(currRow(1:2));
+				if strcmp(prevRow{3}, currRow{1}) && ...
+						prevRow{4} < FeatureExtractor.maxFlightTime
+					diProbe = ...
+						FeatureExtractor.createDiProbe(prevRow, currRow);
+					scores(jj,2) = obj.getSimpleDiScore(diProbe);
+				end
+				prevRow = currRow;
+			end
+		end
+		
 		function score = getSimpleMonoScore(obj, probe)
 			index = find(strcmp(obj.monoRef(:,1), probe{1}));
 			%If there are no occurrences in reference, return -2
@@ -70,17 +87,6 @@ classdef Matcher < handle
 			end
 		end
 		
-		function score = fastSimpleDiScores(obj, probeSet)
-			%FASTSIMPLEDISCORES Returns all digraph scores for an entire
-			%probe set.
-			%	This function is used for calculating scores over the test
-			%	s
-		end
-		
-		function allDiScores = getAllDiScores()
-			
-		end
-		
 		function score = getDiScore(obj, probe)
 			index = find(strcmp(obj.reference(:,1), probe{1}) && ...
 				strcmp(obj.reference(:,2), probe{3}));
@@ -92,11 +98,10 @@ classdef Matcher < handle
 		end
 		
 		function [minDist, meanDist, maxDist] = monoSMD(obj, probe)
-			%METHOD1 Calculates the Scaled Manhattan Distance between the
-			%probe monograph and reference.
-			%	A distance is calculated for every occurrence of the
-			%	monograph in the reference. The function returns the
-			%	minimum, mean and maximum distance.
+			%METHOD1 Calculates the Scaled Manhattan Distance between the probe 
+			%monograph and reference.
+			%	A distance is calculated for every occurrence of the monograph in 
+			%	the reference. The function returns the min, mean and max distance.
 			index = find(strcmp(obj.reference(:,1), probe{1}));
 			durs = obj.reference{index, 2};
 			stdv = obj.reference{index, 4};
@@ -117,13 +122,6 @@ classdef Matcher < handle
 			totalDist = ppDistances+prDistances+rpDistances+rrDistances;
 			minDist = min(totalDist);
 			meanDist = mean(totalDist);
-		end
-		
-		function maxDist = diCD(obj, probe, refRow)
-			% Returns the maximum Correlation Distance between the probe
-			% and reference.
-			
-			
 		end
 		
 		function set.monoRef(obj, monoRefIn)

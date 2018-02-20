@@ -19,7 +19,6 @@ classdef Runner < handle
 		function obj = Runner(user, imposter, params, testSets,...
 				monoRefs, diRefs)
 			obj.db = DBAccess();
-			obj.paramsID = obj.db.insertParams(params);
 			obj.user = user;
 			obj.imposter = imposter;
 			obj.params = params;
@@ -32,11 +31,16 @@ classdef Runner < handle
 		
 		function run(obj)
 			if strcmp(obj.user, 'all')
+				obj.paramsID = obj.db.insertParams(obj.params);
 				results = obj.allUsers();
 				obj.db.insertResults(results, obj.paramsID);
 			else
 				obj.singleUser();
 			end
+		end
+		
+		function setPersonalTrustLevels(obj)
+			obj.params.lockout =	0;
 		end
 	end
 	methods (Access = private)
@@ -55,8 +59,6 @@ classdef Runner < handle
 				diRef = obj.diRefs.(userName);
 				fprintf('Processing %s..\n', userName);
 				currAvgVals = obj.processImposters(currUser,monoRef,diRef);
-				% Store current user's ANGA. If they weren't locked out,
-				% use total number of keystrokes tested.
 				[anga, p1] = obj.getANGA(currAvgVals(currUser,:));
 				allGenVals(currUser) = anga; 
 				%Remove ANGA from array.
@@ -70,7 +72,7 @@ classdef Runner < handle
 					indices = find(currImpVals(:,1) == -1);
 					currImpVals(indices,1) = currImpVals(indices,2);
 				end
-				allImpVals(lastRow+1:lastRow+obj.numImps) = currImpVals(:,1);
+				allImpVals(lastRow+1:lastRow+obj.numImps)=currImpVals(:,1);
 				lastRow = lastRow + obj.numImps;
 				% Increase number of users and imposters not detected for 
 				% the active category. (+/-) etc.
@@ -102,7 +104,7 @@ classdef Runner < handle
 			end
 		end
 		
-		function currAvgVals = processImposters(obj, currUser, monoRef, diRef)
+		function currAvgVals = processImposters(obj,currUser,monoRef,diRef)
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
