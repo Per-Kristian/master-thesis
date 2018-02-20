@@ -10,7 +10,6 @@ classdef TrustModel < handle
 		D
 		missingScore
 		singleOccScore
-		lockoutThresh
 	end
 	
 	methods
@@ -21,8 +20,7 @@ classdef TrustModel < handle
 			%	C = max reward, D = max penalty, missingScore = fixed 
 			%	dissimilarity score for probe not present in reference, 
 			%	singleOccScore = fixed dissimilarity score for only one 
-			%	occurrence of probe in reference, lockoutThresh = threshold
-			%	for locking out the imposter.
+			%	occurrence of probe in reference.
 			
 			obj.trust = 100;
 			obj.A = params.rwrdThreshold;
@@ -31,16 +29,14 @@ classdef TrustModel < handle
 			obj.D = params.maxPen;
 			obj.singleOccScore = params.singleOccScore;
 			obj.missingScore = params.missingScore;
-			obj.lockoutThresh = params.lockout;
 		end
 		
 		function newTrust = alterTrust(obj, score)
 			%ALTERTRUST Alters the current trust level.
-			%   Takes a dissimilarity score (number of standard
-			%   deviations) as input. Calculates a change of trust and sets
-			%   the new trust level accordingly. Returns new trust level.
-			%	If the score parameter is -1 or -2, change it to fixed a
-			%	fixed score for edge cases.
+			% Takes a dissimilarity score (number of standard deviations) as 
+			%	input. Calculates a change of trust and sets the new trust level 
+			%	accordingly. Returns new trust level. If the score parameter is -1
+			%	or -2, change it to fixed a fixed score for edge cases.
 			if score == -1
 				score = obj.singleOccScore;
 			elseif score == -2
