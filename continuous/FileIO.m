@@ -82,15 +82,36 @@ classdef FileIO
 			%   Detailed explanation goes here
 			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d/', ... 
 				paramID, numUsers));
-			userResFolder = fullfile(resPath, ... 
-				sprintf('User_%02d.mat',user));
-			impFolder = fullfile(userResFolder, ... 
-				sprintf('User_%02d.mat',imposter));
+			userName = getUserName(user);
+			imposterName = getUserName(imposter);
+			userResFolder = fullfile(resPath, sprintf('%s/',userName));
+			impFolder = fullfile(userResFolder, sprintf('%s/',imposterName));
 			if ~isdir(impFolder)
 				mkdir(impFolder);
 			end
+			result.avgActions = avgActions;
+			result.trustProgress = trustProgress;
 			toFile = strcat(impFolder, 'result.mat');
-			save(toFile, 'avgActions');
+			save(toFile, 'result');
+		end
+		
+		function result = readSingleResult(user, imposter, type, paramID, ...
+				numUsers,full)
+			if full
+				resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d_full/', ...
+					paramID, numUsers));
+			else
+				resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d/', ... 
+					paramID, numUsers));
+			end
+			userName = getUserName(user);
+			imposterName = getUserName(imposter);
+			userResFolder = fullfile(resPath, sprintf('%s/',userName));
+			impFolder = fullfile(userResFolder, sprintf('%s/',imposterName));
+			fromFile = fullfile(impFolder, 'result.mat');
+			if exist(fromFile, 'file') == 2
+				result = importdata(fromFile);
+			end
 		end
 		
 		function writeScores(userName, imposterName, type, setType, scores) %#ok<INUSD>
@@ -129,6 +150,17 @@ classdef FileIO
 			end
 			toFile = fullfile(dirPath, sprintf('/%s.mat', userName));
 			save(toFile, 'params');
+		end
+		
+		function params = readPersonalParams(userName, classifier)
+			dirPath = fullfile(FileIO.PPERSPARAMS, classifier);
+			fromFile = fullfile(dirPath,sprintf('/%s.mat',userName));
+			if exist(fromFile, 'file') == 2
+				params = importdata(fromFile);
+			else
+				fprintf('Error, file not found: %s', fromFile);
+				params = NaN;
+			end
 		end
 		
 		function rawData = readRawData(user)
