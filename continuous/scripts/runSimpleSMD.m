@@ -1,4 +1,5 @@
-function runSimpleSMD(user, imposter, testSets, monoRefs, diRefs)
+function runSimpleSMD(user, imposter, probeSets, setType, monoRefs, ...
+	diRefs, fast, note)
 %Expects either an integer or 'all'. Runs the authentication system with
 %either a specific user or all users, specifically using simple Scaled 
 %Manhattan Distance based on mean and standard deviation.
@@ -18,8 +19,10 @@ params.singleOccScore = 3;
 params.missingScore = 3.3;
 params.lockout = 90;
 params.type = 'simpleSMD';
+params.note = note;
 
-runner = Runner(user, imposter, params, testSets, monoRefs, diRefs);
+runner = Runner(user, imposter, params, probeSets, setType, monoRefs, ...
+	diRefs, fast);
 runner.run();
 
 toc

@@ -8,25 +8,29 @@ classdef Runner < handle
 		imposter
 		params
 		paramsID
-		testSets
+		probeSets
+		setType
 		monoRefs
 		diRefs
 		numUsers
 		numImps
+		fast
 	end
 	
 	methods
-		function obj = Runner(user, imposter, params, testSets,...
-				monoRefs, diRefs)
+		function obj = Runner(user, imposter, params, probeSets, setType, ...
+				monoRefs, diRefs, fast)
 			obj.db = DBAccess();
 			obj.user = user;
 			obj.imposter = imposter;
 			obj.params = params;
-			obj.testSets = testSets;
+			obj.probeSets = probeSets;
+			obj.setType = setType;
 			obj.monoRefs = monoRefs;
 			obj.diRefs = diRefs;
-			obj.numUsers = numel(fieldnames(testSets));
+			obj.numUsers = numel(fieldnames(probeSets));
 			obj.numImps = obj.numUsers-1;
+			obj.fast = fast;
 		end
 		
 		function run(obj)
@@ -37,10 +41,6 @@ classdef Runner < handle
 			else
 				obj.singleUser();
 			end
-		end
-		
-		function setPersonalTrustLevels(obj)
-			obj.params.lockout =	0;
 		end
 	end
 	methods (Access = private)
@@ -60,7 +60,7 @@ classdef Runner < handle
 				fprintf('Processing %s..\n', userName);
 				currAvgVals = obj.processImposters(currUser,monoRef,diRef);
 				[anga, p1] = obj.getANGA(currAvgVals(currUser,:));
-				allGenVals(currUser) = anga; 
+				allGenVals(currUser) = anga;
 				%Remove ANGA from array.
 				currImpVals = currAvgVals;
 				currImpVals(currUser, :) = [];
@@ -105,23 +105,34 @@ classdef Runner < handle
 		end
 		
 		function currAvgVals = processImposters(obj,currUser,monoRef,diRef)
+			%userName = getUserName(currUser);
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
 					imposterName = getUserName(currImposter);
-					testSet = obj.testSets.(imposterName);
+					probeSet = obj.probeSets.(imposterName);
+					if obj.fast
+						[avgActions, trustProgress] = ... 
+							obj.fastProcess(currUser, currImposter);
+					else
 					[avgActions, trustProgress] = ...
-						obj.simulate(monoRef, diRef, testSet);
+						obj.simulate(monoRef, diRef, probeSet);
+					end
+					%identical = obj.compareToOld(userName, imposterName,avgActions);
 					FileIO.writeSingleResult(currUser, currImposter, ...
 						obj.params.type, obj.paramsID, ...
 						obj.numUsers, trustProgress, avgActions);
 					currAvgVals(currImposter,:) = ...
-						[avgActions, length(testSet)];
+						[avgActions, length(probeSet)];
 				end
 			else
-				testSet = obj.testSets.(getUserName(obj.imposter));
-				obj.simulate(monoRef, diRef, testSet);
-				currAvgVals = [obj.imposter, length(testSet)];
+				probeSet = obj.probeSets.(getUserName(obj.imposter));
+				if obj.fast
+					obj.fastProcess(monoRef, diRef, probeSet);
+				else
+					obj.simulate(monoRef, diRef, probeSet);
+				end
+				currAvgVals = [obj.imposter, length(probeSet)];
 			end
 		end
 		
@@ -135,6 +146,14 @@ classdef Runner < handle
 				anga = row(1);
 				notLocked = false;
 			end
+		end
+		
+		function identical = compareToOld(user, imposter, avgActions)
+			%COMPARETOOLD Function for debugging. Compares a single result
+			%against an older one.
+			res = FileIO.readSingleResult(user, imposter, obj.param.type, ...
+				obj.paramsID, obj.numUsers, 1);
+			identical = avgActions == res;		
 		end
 		
 		function category = decideCategory(obj, p1, p2) %#ok<INUSL>
@@ -152,29 +171,54 @@ classdef Runner < handle
 				end
 		end
 		
-		function [num] = countUndetectedImposters(obj, currImpVals)
+		function [num] = countUndetectedImposters(obj, currImpVals) %#ok<INUSL>
 			undetected = currImpVals(currImpVals(:,1) == -1, :);
 			num = size(undetected,1);
 		end
 		
-		function fastProcess(obj, user, imposter)
-			[monoRef, diRef, testSet] = obj.fetchSets(user, imposter);
-			
-			
+		function [avgActions, trustProgress] = fastProcess(obj, currUser, ...
+				currImposter)
+			%FASTPROCESS Uses pre-calculated scores, and processes all users
+			%against themselves and eachother.
+			monoCol = 1;
+			diCol = 2;
+			userName = getUserName(currUser);
+			userParams = obj.params;
+			if isnan(userParams.lockout)
+				storedParams = FileIO.readPersonalParams(userName,persParams.type);
+				userParams.lockout = storedParams.threshold;
+			end
+			imposterName = getUserName(currImposter);
+			scores = FileIO.readScores(userName, imposterName, ...
+				userParams.type, obj.setType);
+			scoresLength = length(scores);
+			trustProgress = zeros(length(scores), 1);
+			trustModel = TrustModel(userParams);
+			for jj = 1:scoresLength
+				newTrust = trustModel.alterTrust(scores(jj,monoCol));
+				if ~isnan(scores(jj,diCol))
+					newTrust = trustModel.alterTrust(scores(jj, diCol));
+				end
+				trustProgress(jj) = newTrust;
+				if newTrust < userParams.lockout
+					trustModel.trust = 100;
+				end
+			end
+			avgActions = obj.avgActions(trustProgress, userParams);
 		end
 		
 		function [avgActions,trustProgress] = simulate(obj, ...
-				monoRef, diRef, testSet)
+				monoRef, diRef, probeSet)
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
 			matcher = Matcher(monoRef, diRef);
-			testLength = length(testSet);
+			testLength = length(probeSet);
 			trustModel = TrustModel(obj.params);
 			trustProgress = zeros(testLength, 1);
 			prevRow = {[], [], [], []};
 			
 			for jj = 1:testLength
-				currRow = testSet(jj,:);
+				currRow = probeSet(jj,:);
 				score = matcher.getSimpleMonoScore(currRow(1:2));
 				newTrust = trustModel.alterTrust(score);
 				% Check previous row
@@ -192,24 +236,24 @@ classdef Runner < handle
 				end
 				prevRow = currRow;
 			end
-			avgActions = obj.avgActions(trustProgress);
+			avgActions = obj.avgActions(trustProgress, obj.params);
 		end
 			
-		function [monoRef, diRef, testSet] = fetchSets(obj, user, imposter)
+		function [monoRef, diRef, probeSet] = fetchSets(obj, user, imposter)
 			%FETCHSETS Fetches references and test set for specified user
 			%and imposter.
 			userName = sprintf('User_%02d', user);
 			monoRef = obj.monoRefs.(userName);
 			diRef = obj.diRefs.(userName);
 			imposterName = sprintf('User_%02d', imposter);
-			testSet = obj.testSets.(imposterName);
+			probeSet = obj.probeSets.(imposterName);
 		end
 		
-		function avg = avgActions(obj, trustProgress)
+		function avg = avgActions(obj, trustProgress, params)
 			% AVGACTIONS Calculates the average number of actions before
 			% being locked out.
 			%	Returns -1 if they are never locked out.
-			indices = find(trustProgress < obj.params.lockout);
+			indices = find(trustProgress < params.lockout);
 			
 			if isempty(indices)
 				avg = -1;
