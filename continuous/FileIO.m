@@ -2,6 +2,7 @@ classdef FileIO
 	%FILEIO This class contains static methods for I/O.
 	properties (Constant, GetAccess = public)
 		PROOT = fullfile(userpath, '/matlab_projects/');
+		PDB = fullfile(userpath, '/matlab_projects/db/');
 		PDATA = fullfile(userpath, '/matlab_projects/Data/');
 		PFILTERED = fullfile(userpath,'/matlab_projects/Data/filtered/');
 		PPERSPARAMS = fullfile(userpath,'/matlab_projects/Data/persParams/');
@@ -76,36 +77,37 @@ classdef FileIO
 			filtered = importdata(fromFile);
 		end
 		
-		function writeSingleResult(user, imposter, ... 
-				type, paramID, numUsers, trustProgress, avgActions) %#ok<INUSD>
+		function writeSingleResult(userName, imposterName, ... 
+				type, paramID, numUsers, trustProgress, avgActions, fast)
 			%METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
-			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d/', ... 
-				paramID, numUsers));
-			userName = getUserName(user);
-			imposterName = getUserName(imposter);
+			if fast
+				process = 'fast';
+			else
+				process = 'full';
+			end
+			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d_%s/', ...
+				paramID, numUsers, process));
 			userResFolder = fullfile(resPath, sprintf('%s/',userName));
 			impFolder = fullfile(userResFolder, sprintf('%s/',imposterName));
 			if ~isdir(impFolder)
 				mkdir(impFolder);
 			end
 			result.avgActions = avgActions;
-			result.trustProgress = trustProgress;
+			result.trustProgress = trustProgress; %#ok<STRNU>
 			toFile = strcat(impFolder, 'result.mat');
 			save(toFile, 'result');
 		end
 		
-		function result = readSingleResult(user, imposter, type, paramID, ...
-				numUsers,full)
-			if full
-				resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d_full/', ...
-					paramID, numUsers));
+		function result = readSingleResult(userName, imposterName, type, ...
+				paramID, numUsers,fast)
+			if fast
+				process = 'fast';
 			else
-				resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d/', ... 
-					paramID, numUsers));
+				process = 'full';
 			end
-			userName = getUserName(user);
-			imposterName = getUserName(imposter);
+			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d_%s/', ...
+				paramID, numUsers, process));
 			userResFolder = fullfile(resPath, sprintf('%s/',userName));
 			impFolder = fullfile(userResFolder, sprintf('%s/',imposterName));
 			fromFile = fullfile(impFolder, 'result.mat');
@@ -182,6 +184,13 @@ classdef FileIO
 			%	Pwd is simply read from a file outside of the repo's scope, 
 			%	preventing sneaky GitHub lurkers from gettin' jiggy wit it.
 			pwd = importdata(fullfile(FileIO.PROOT,'db/password.mat'));
+		end
+		
+		function conf = getDbConf(systemType)
+			%GETDBCONF returns the database configuration.
+			%	Conf is simply read from a file outside of the repo's scope,
+			%	preventing sneaky GitHub lurkers from gettin' jiggy wit it.
+			conf = importdata(fullfile(FileIO.PDB, systemType, '/dbconf.mat'));
 		end
 	end
 end
