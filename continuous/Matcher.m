@@ -60,7 +60,14 @@ classdef Matcher < handle
 				else
 					refMean = refRow{3};
 					refStd = refRow{4};
-					score = abs(probe{2}-refMean)/refStd;
+					diff = abs(probe{2}-refMean);
+					if diff == 0
+						diff = 0.0001;
+					end
+					if refStd == 0
+						refStd = 0.1;
+					end
+					score = diff/refStd;
 				end
 			end
 		end
@@ -77,12 +84,20 @@ classdef Matcher < handle
 				else
 					latMeans = refRow{7};
 					latStds = refRow{8};
-					ppDist = (abs(probe{3}-latMeans(1)))/latStds(1);
-					prDist = (abs(probe{4}-latMeans(2)))/latStds(2);
-					rpDist = (abs(probe{5}-latMeans(3)))/latStds(3);
-					rrDist = (abs(probe{6}-latMeans(4)))/latStds(4);
-					
-					score = (ppDist + prDist + rpDist + rrDist) / 4;
+					dists = NaN(1,4);
+					for ii = 1:4
+						diff = abs(probe{ii+2}-latMeans(ii));
+						% Handle edge cases where the feature matches the exact
+						% expected value. Also, handle cases where stdv is 0.
+						if diff == 0
+							diff = 0.0001;
+						end
+						if latStds(ii) == 0
+							latStds(ii) = 0.1;
+						end
+						dists(ii) = diff/latStds(ii);
+					end
+					score = mean(dists);
 				end
 			end
 		end
@@ -131,7 +146,6 @@ classdef Matcher < handle
 		function set.diRef(obj, diRefIn)
 			obj.diRef = diRefIn;
 		end
-		
 	end
 end
 

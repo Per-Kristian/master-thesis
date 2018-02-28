@@ -15,11 +15,12 @@ classdef Runner < handle
 		numUsers
 		numImps
 		fast
+		resultNote
 	end
 	
 	methods
 		function obj = Runner(user, imposter, params, probeSets, setType, ...
-				monoRefs, diRefs, fast)
+				monoRefs, diRefs, fast, resultNote)
 			obj.db = DBAccess();
 			obj.user = user;
 			obj.imposter = imposter;
@@ -31,13 +32,14 @@ classdef Runner < handle
 			obj.numUsers = numel(fieldnames(probeSets));
 			obj.numImps = obj.numUsers-1;
 			obj.fast = fast;
+			obj.resultNote = resultNote;
 		end
 		
 		function run(obj)
+			obj.paramsID = obj.db.insertParams(obj.params);
 			if strcmp(obj.user, 'all')
-				obj.paramsID = obj.db.insertParams(obj.params);
 				results = obj.allUsers();
-				obj.db.insertResults(results, obj.paramsID);
+				obj.db.insertResults(results, obj.paramsID, obj.resultNote);
 			else
 				obj.singleUser();
 			end
@@ -55,10 +57,8 @@ classdef Runner < handle
 			for currUser = 1:obj.numUsers
 				tic
 				userName = getUserName(currUser);
-				monoRef = obj.monoRefs.(userName);
-				diRef = obj.diRefs.(userName);
 				fprintf('Processing %s..\n', userName);
-				currAvgVals = obj.processImposters(currUser,monoRef,diRef);
+				currAvgVals = obj.processImposters(userName);
 				[anga, p1] = obj.getANGA(currAvgVals(currUser,:));
 				allGenVals(currUser) = anga;
 				%Remove ANGA from array.
@@ -92,20 +92,15 @@ classdef Runner < handle
 				mean(allImpVals), sum(results(:,4))];
 		end
 		
-		function [avgActions, trustProgress] = singleUser(obj)
-			if strcmp(obj.imposter, 'all')
-				for currImposter = 1:obj.numUsers
-					[avgActions, trustProgress] = ... 
-						obj.simulate(obj.user, currImposter);
-				end
-			else
-				[avgActions, trustProgress] = ... 
-					obj.simulate(obj.user, obj.imposter);
-			end
+		function singleUser(obj)
+			userName = getUserName(obj.user);
+			fprintf('Processing %s..\n', userName);
+			obj.processImposters(userName);
 		end
 		
-		function currAvgVals = processImposters(obj,currUser,monoRef,diRef)
-			%userName = getUserName(currUser);
+		function currAvgVals = processImposters(obj,userName)
+			monoRef = obj.monoRefs.(userName);
+			diRef = obj.diRefs.(userName);
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
@@ -113,26 +108,31 @@ classdef Runner < handle
 					probeSet = obj.probeSets.(imposterName);
 					if obj.fast
 						[avgActions, trustProgress] = ... 
-							obj.fastProcess(currUser, currImposter);
+							obj.fastProcess(userName, imposterName);
 					else
 					[avgActions, trustProgress] = ...
 						obj.simulate(monoRef, diRef, probeSet);
 					end
-					%identical = obj.compareToOld(userName, imposterName,avgActions);
-					FileIO.writeSingleResult(currUser, currImposter, ...
+					FileIO.writeSingleResult(userName, imposterName, ...
 						obj.params.type, obj.paramsID, ...
-						obj.numUsers, trustProgress, avgActions);
+						obj.numUsers, trustProgress, avgActions, obj.fast);
 					currAvgVals(currImposter,:) = ...
 						[avgActions, length(probeSet)];
 				end
 			else
-				probeSet = obj.probeSets.(getUserName(obj.imposter));
+				imposterName = getUserName(obj.imposter);
 				if obj.fast
-					obj.fastProcess(monoRef, diRef, probeSet);
+					[avgActions, trustProgress] = ...
+					obj.fastProcess(userName, imposterName);
 				else
+					probeSet = obj.probeSets.(imposterName);
+					[avgActions, trustProgress] = ...
 					obj.simulate(monoRef, diRef, probeSet);
 				end
-				currAvgVals = [obj.imposter, length(probeSet)];
+				FileIO.writeSingleResult(userName, imposterName, ...
+					obj.params.type, obj.paramsID, ...
+					obj.numUsers, trustProgress, avgActions, obj.fast);
+				currAvgVals = [obj.imposter, length(obj.probeSets.(imposterName))];
 			end
 		end
 		
@@ -148,12 +148,13 @@ classdef Runner < handle
 			end
 		end
 		
-		function identical = compareToOld(user, imposter, avgActions)
+		function identical = compareToOld(obj, userName, imposterName, ...
+				avgActions, fast)
 			%COMPARETOOLD Function for debugging. Compares a single result
 			%against an older one.
-			res = FileIO.readSingleResult(user, imposter, obj.param.type, ...
-				obj.paramsID, obj.numUsers, 1);
-			identical = avgActions == res;		
+			res = FileIO.readSingleResult(userName, imposterName, ... 
+				obj.params.type, obj.paramsID, obj.numUsers, fast);
+			identical = res.avgActions == avgActions;
 		end
 		
 		function category = decideCategory(obj, p1, p2) %#ok<INUSL>
@@ -176,19 +177,17 @@ classdef Runner < handle
 			num = size(undetected,1);
 		end
 		
-		function [avgActions, trustProgress] = fastProcess(obj, currUser, ...
-				currImposter)
-			%FASTPROCESS Uses pre-calculated scores, and processes all users
-			%against themselves and eachother.
+		function [avgActions, trustProgress] = fastProcess(obj, userName, ...
+				imposterName)
+			%FASTPROCESS Uses pre-calculated scores to process an imposter
+			%against a user
 			monoCol = 1;
 			diCol = 2;
-			userName = getUserName(currUser);
 			userParams = obj.params;
 			if isnan(userParams.lockout)
 				storedParams = FileIO.readPersonalParams(userName,persParams.type);
 				userParams.lockout = storedParams.threshold;
 			end
-			imposterName = getUserName(currImposter);
 			scores = FileIO.readScores(userName, imposterName, ...
 				userParams.type, obj.setType);
 			scoresLength = length(scores);
