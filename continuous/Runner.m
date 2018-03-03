@@ -58,7 +58,7 @@ classdef Runner < handle
 				tic
 				userName = getUserName(currUser);
 				fprintf('Processing %s..\n', userName);
-				currAvgVals = obj.processImposters(userName);	
+				currAvgVals = obj.processImposters(userName);
 				[anga, p1] = obj.getANGA(currAvgVals(currUser,:));
 				allGenVals(currUser) = anga;
 				%Remove ANGA from array.
