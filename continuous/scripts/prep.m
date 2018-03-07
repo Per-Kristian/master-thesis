@@ -1,9 +1,11 @@
 disp('Fetching references..');
 numFiles = length(dir(fullfile(FileIO.PFILTERED,'*.mat')));
+full = true;
 for ii = 1:numFiles
 	userName = getUserName(ii);
-	[monoRefs.(userName), diRefs.(userName)] = FileIO.readRefs(ii);
+	[monoRefs.(userName), diRefs.(userName)] = FileIO.readRefs(ii, full);
+	diRefSortFlight.(userName) = sortrows(diRefs.(userName), 5);
 	testSets.(userName) = FileIO.readTestSet(ii);
 	validSets.(userName) = FileIO.readValidationSet(ii);
 end
-clearvars -except diRefs monoRefs testSets validSets;
+clearvars -except diRefs diRefSortFlight monoRefs testSets validSets;

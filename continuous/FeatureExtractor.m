@@ -13,7 +13,7 @@ classdef FeatureExtractor
 	
 	methods (Static)
 		function singleActions = extractSingleActions(keystrokes)
-			%METHOD1 Summary of this method goes here
+			% METHOD1 Summary of this method goes here
 			%   Detailed explanation goes here
 			
 			uniqueChars = unique(keystrokes(:,1));
@@ -30,17 +30,20 @@ classdef FeatureExtractor
 			end
 		end
 		
-		function digraphActions = extractDigraphActions(keystrokes)
+		function digraphActions = extractDigraphActions(keystrokes, full)
 			% Store strings in one cell string:
 			Strings  = keystrokes(:, [1, 3]);
-			[uStrings, iStrings, iUniq] = unique(string(Strings), 'rows');
+			[uStrings, ~, iUniq] = unique(string(Strings), 'rows');
 			Values = cell2mat(keystrokes(:, [2, 4]));
 			% todo Do we really need to check duration here? remDur.
 			validValues = Values(:, 2) < FeatureExtractor.maxFlightTime;
 			%validValues = (Values(:, 1) < 100000);
-			
 			% Pre-allocate memory for cell array
-			digraphActions = cell(length(uStrings),8);
+			if full
+				digraphActions = cell(length(uStrings),14);
+			else
+				digraphActions = cell(length(uStrings),10);
+			end
 			uStringsCell = cellstr(uStrings);
 			digraphActions(:, 1:2) = uStringsCell(:, 1:2);
 
@@ -50,22 +53,17 @@ classdef FeatureExtractor
 				[pp,pr,rp,rr] = ... 
 					FeatureExtractor.getRefLats(occurIndices, keystrokes);
 				%Return digraphs with latencies
-				digraphActions{ii,3} = pp;
-				digraphActions{ii,4} = pr;
-				digraphActions{ii,5} = rp;
-				digraphActions{ii,6} = rr;
-				digraphActions{ii,7} = ...
-					[nanmean(pp),nanmean(pr),nanmean(rp),nanmean(rr)];
-				digraphActions{ii,8} = ... 
-					[nanstd(pp),nanstd(pr),nanstd(rp),nanstd(rr)];
+				digraphActions(ii,3:6) = ...
+					{nanmean(pp),nanmean(pr),nanmean(rp),nanmean(rr)};
+				digraphActions(ii,7:10) = ... 
+					{nanstd(pp),nanstd(pr),nanstd(rp),nanstd(rr)};
+				if full
+					digraphActions(ii,11:14) = {pp,pr,rp,rr};
+				end
 			end
 			% remove rows without valid latencies
-			meanCol = cell2mat(digraphActions(:,7));
+			meanCol = cell2mat(digraphActions(:,3));
 			digraphActions = digraphActions(~any(isnan(meanCol),2),:);
-			
-			%indices = find(strcmp(keystrokes(:,1), ...
-			%	uniqueDigraphs{}))
-			
 		end
 		
 		function probe = createDiProbe(digraphRow, nextRow)

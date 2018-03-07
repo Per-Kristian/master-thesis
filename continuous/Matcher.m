@@ -82,8 +82,8 @@ classdef Matcher < handle
 				if length(refRow{3}) == 1
 					score = -1;
 				else
-					latMeans = refRow{7};
-					latStds = refRow{8};
+					latMeans = cell2mat(refRow(3:6));
+					latStds = cell2mat(refRow(7:10));
 					dists = NaN(1,4);
 					for ii = 1:4
 						diff = abs(probe{ii+2}-latMeans(ii));

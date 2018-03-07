@@ -10,6 +10,8 @@ classdef FileIO
 		PRESULTS = fullfile(userpath,'/matlab_projects/Data/results/');
 		PMONO = fullfile(userpath,'/matlab_projects/Data/filtered/MonographFeatures/');
 		PDI = fullfile(userpath,'/matlab_projects/Data/filtered/DigraphFeatures/');
+		PMONOSMALL = fullfile(userpath,'/matlab_projects/Data/filtered/MonographFeatures/small/');
+		PDISMALL = fullfile(userpath,'/matlab_projects/Data/filtered/DigraphFeatures/small/');
 		PTEST = fullfile(userpath,'/matlab_projects/Data/filtered/testing/');
 		PVALID = fullfile(userpath,'/matlab_projects/Data/filtered/validation/');
 	end
@@ -44,30 +46,44 @@ classdef FileIO
 			end
 		end
 		
-		function writeRefs(user, monoRef, diRef) %#ok<INUSD>
-			toFile = fullfile(FileIO.PMONO,sprintf('User_%02d.mat',user));
-			if ~isdir(FileIO.PMONO)
-				mkdir(FileIO.PMONO);
+		function writeRefs(user, monoRef, diRef, full) %#ok<INUSL>
+			[monoPath, diPath] = FileIO.getRefPaths(full);
+			userName = getUserName(user);
+			if ~isdir(monoPath)
+				mkdir(monoPath);
 			end
+			toFile = fullfile(monoPath,sprintf('%s.mat', userName));
 			save(toFile, 'monoRef');
-			toFile = fullfile(FileIO.PDI,sprintf('User_%02d.mat',user));
-			if ~isdir(FileIO.PDI)
-				mkdir(FileIO.PDI);
+			if ~isdir(diPath)
+				mkdir(diPath);
 			end
+			toFile = fullfile(diPath,sprintf('%s.mat', userName));
 			save(toFile, 'diRef');
 		end
 		
-		function [monoRef, diRef] = readRefs(user)
+		function [monoRef, diRef] = readRefs(user, full)
 			%	Returns both Monograph and Digraph references.
 			%	[m, d] = fetchRef(3) returns mono- and digraph references
 			%	for user 3.
-			fromFile = fullfile(FileIO.PMONO,sprintf('User_%02d.mat',user));
+			[monoPath, diPath] = FileIO.getRefPaths(full);
+			userName = getUserName(user);
+			fromFile = fullfile(monoPath, sprintf('%s.mat',userName));
 			if exist(fromFile, 'file') == 2
 				monoRef = importdata(fromFile);
 			end
-			fromFile = fullfile(FileIO.PDI,sprintf('User_%02d.mat', user));
+			fromFile = fullfile(diPath, sprintf('%s.mat',userName));
 			if exist(fromFile, 'file') == 2
 				diRef = importdata(fromFile);
+			end
+		end
+		
+		function [monoPath, diPath] = getRefPaths(full)
+			if full
+				monoPath = FileIO.PMONO;
+				diPath = FileIO.PDI;
+			else
+				monoPath = FileIO.PMONOSMALL;
+				diPath = FileIO.PMONOSMALL;
 			end
 		end
 		
@@ -177,13 +193,6 @@ classdef FileIO
 			filename = ... 
 				fullfile(FileIO.PFILTERED,sprintf('/User_%02d.mat', user));
 			save(filename, 'data');
-		end
-		
-		function pwd = getPassword()
-			%GETPASSWORD returns the database password.
-			%	Pwd is simply read from a file outside of the repo's scope, 
-			%	preventing sneaky GitHub lurkers from gettin' jiggy wit it.
-			pwd = importdata(fullfile(FileIO.PROOT,'db/password.mat'));
 		end
 		
 		function conf = getDbConf(systemType)
