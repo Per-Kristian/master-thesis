@@ -102,6 +102,86 @@ classdef Matcher < handle
 			end
 		end
 		
+		function score = getBlockScore(obj, monographs, digraphs)
+			
+			absDist = obj.getAbsoluteDistance(monographs, digraphs);
+			relDist = obj.getRelativeDistance(monographs, digraphs);
+			score = mean([absDist, relDist]);
+		end
+		
+		function dist = getAbsoluteDistance(obj, monographs, digraphs)
+			%[sharedMonoRef, sharedMonoProbe] = obj.getSharedMonos(monographs);
+			[sharedDiRef, sharedDiProbe] = obj.getSharedDigraphs(digraphs);
+			
+		end
+		
+		function shared = getSharedMonos(obj, monographs)
+			shared = ismember(obj.monoRef, monographs);
+		end
+		
+		function [sharedRef,sharedProbe] = getSharedDigraphs(obj, digraphs)
+			refIndices = zeros(size(digraphs,1),1);
+			probeIndices = false(size(digraphs,1),1);
+			for kk = 1:length(refIndices)
+				index = find(strcmp(obj.diRef(:,1), digraphs{kk,1}) & ...
+						strcmp(obj.diRef(:,2), digraphs{kk,2}));
+				if ~isempty(index)
+					refIndices(kk) = index;
+					probeIndices(kk) = true;
+				end
+			end
+			sharedRef = obj.diRef(refIndices(nonzeros(refIndices)),:);
+			sharedProbe = digraphs(probeIndices);
+		end
+		
+		%{
+		function collection = getSharedDis(obj, digraphs)
+			%{
+			sharedLogical = ismember(digraphs(:,1:2), obj.diRef(:,1:2));
+			ind = sharedLogical(:,1) & sharedLogical(:,2);
+			sharedProbe = digraphs(ind,:);
+			%}
+			
+			sharedLogical = ismember(obj.diRef(:,1:2), digraphs(:, 1:2));
+			ind = sharedLogical(:,1) & sharedLogical(:,2);
+			sharedRef = obj.diRef(ind,:);
+			numShared = length(sharedRef);
+			collection = cell(numShared*2, size(sharedRef,2));
+			collectionRow = 1;
+			refRowNum = 1;
+			while collectionRow <= numShared*2
+				index = find(strcmp(digraphs(:,1), sharedRef(refRowNum,1)) & ...
+					strcmp(digraphs(:,2),sharedRef(refRowNum,2)));
+				if ~isempty(index)
+					collection(collectionRow,:) = sharedRef(collectionRow,:);
+					collection(collectionRow+1,:) = digraphs(index,:);
+					%{
+					if length(refRow{3}) == 1
+						score = -1;
+					else
+						latMeans = cell2mat(refRow(3:6));
+						latStds = cell2mat(refRow(7:10));
+						dists = NaN(1,4);
+						for ii = 1:4
+							diff = abs(probe{ii+2}-latMeans(ii));
+							% Handle edge cases where the feature matches the exact
+							% expected value. Also, handle cases where stdv is 0.
+							if diff == 0
+								diff = 0.0001;
+							end
+							if latStds(ii) == 0
+								latStds(ii) = 0.1;
+							end
+							dists(ii) = diff/latStds(ii);
+						end
+						score = mean(dists);
+					end
+					%}
+				end
+			end
+		end
+		%}
+		
 		function score = getDiScore(obj, probe)
 			index = find(strcmp(obj.reference(:,1), probe{1}) && ...
 				strcmp(obj.reference(:,2), probe{3}));

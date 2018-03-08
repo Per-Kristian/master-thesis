@@ -21,7 +21,7 @@ classdef PARunner < handle
 	methods
 		function obj = PARunner(user, imposter, params, probeSets, setType, ...
 				monoRefs, diRefs, fast, resultNote)
-			obj.db = DBAccess();
+%			obj.db = DBAccess();
 			obj.user = user;
 			obj.imposter = imposter;
 			obj.params = params;
@@ -36,10 +36,10 @@ classdef PARunner < handle
 		end
 		
 		function run(obj)
-			obj.paramsID = obj.db.insertParams(obj.params);
+			%obj.paramsID = obj.db.insertParams(obj.params);
 			if strcmp(obj.user, 'all')
 				results = obj.allUsers();
-				obj.db.insertResults(results, obj.paramsID, obj.resultNote);
+				%obj.db.insertResults(results, obj.paramsID, obj.resultNote);
 			else
 				obj.singleUser();
 			end
@@ -58,7 +58,7 @@ classdef PARunner < handle
 				tic
 				userName = getUserName(currUser);
 				fprintf('Processing %s..\n', userName);
-				currAvgVals = obj.processImposters(userName);
+				currAvgVals = obj.processImposters(userName); % Go through this
 				[anga, p1] = obj.getANGA(currAvgVals(currUser,:));
 				allGenVals(currUser) = anga;
 				%Remove ANGA from array.
@@ -100,18 +100,20 @@ classdef PARunner < handle
 		
 		function currAvgVals = processImposters(obj,userName)
 			monoRef = obj.monoRefs.(userName);
-			diRef = obj.diRefs.(userName);
+			diRefPP = obj.diRefs.(userName);
+
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
 					imposterName = getUserName(currImposter);
 					probeSet = obj.probeSets.(imposterName);
 					if obj.fast
-						[avgActions, trustProgress] = ... 
+						[avgActions, trustProgress] = ...
 							obj.fastProcess(userName, imposterName);
 					else
-					[avgActions, trustProgress] = ...
-						obj.simulate(monoRef, diRef, probeSet);
+						diRefFlight = sortrows(diRefPP, 5);
+						[fmr, fnmr] = ...
+							obj.simulate(monoRef, diRefPP, diRefFlight, probeSet);
 					end
 					FileIO.writeSingleResult(userName, imposterName, ...
 						obj.params.type, obj.paramsID, ...
@@ -122,50 +124,50 @@ classdef PARunner < handle
 			else
 				imposterName = getUserName(obj.imposter);
 				if obj.fast
-					[avgActions, trustProgress] = ...
-					obj.fastProcess(userName, imposterName);
+					[fmr, fnmr] = obj.fastProcess(userName, imposterName);
 				else
 					probeSet = obj.probeSets.(imposterName);
-					[avgActions, trustProgress] = ...
-					obj.simulate(monoRef, diRef, probeSet);
+					diRefFlight = sortrows(diRefPP, 5);
+					[fmr,fnmr] = obj.simulate(monoRef,diRefPP,diRefFlight,probeSet);
 				end
-				FileIO.writeSingleResult(userName, imposterName, ...
-					obj.params.type, obj.paramsID, ...
-					obj.numUsers, trustProgress, avgActions, obj.fast);
+				%FileIO.writeSingleResult(userName, imposterName, ...
+				%	obj.params.type, obj.paramsID, ...
+				%	obj.numUsers, trustProgress, avgActions, obj.fast);
 				currAvgVals = [obj.imposter, length(obj.probeSets.(imposterName))];
 			end
 		end
 		
-		
-		function [avgActions,trustProgress] = simulate(obj, ...
-				monoRef, diRef, probeSet)
+		function [fmr, fnmr] = simulate(obj, ...
+				monoRef, diRefPP, diRefFlight, probeSet)
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
-			matcher = Matcher(monoRef, diRef);
+			matcher = Matcher(monoRef, diRefPP, diRefFlight);
 			testLength = length(probeSet);
-			trustProgress = zeros(testLength, 1);
-			prevRow = {[], [], [], []};
+			finalRow = testLength-mod(testLength,obj.params.blockLength);
 			
-			for jj = 1:testLength-mod(testLength, blockLength)
-				currRow = probeSet(jj,:);
-				score = matcher.getSimpleMonoScore(currRow(1:2));
-				newTrust = trustModel.alterTrust(score);
-				% Check previous row
-				if strcmp(prevRow{3}, currRow{1}) && ...
-						prevRow{4} < FeatureExtractor.maxFlightTime
-					diProbe = ...
+			for ii = 1:obj.params.blockLength:finalRow
+				lastBlockRow = ii+obj.params.blockLength-1;
+				block = probeSet(ii:lastBlockRow, :);
+				%digraphs = obj.findNgraphs(block);
+				digraphs = FeatureExtractor.extractDigraphActions(block, true);
+				score = matcher.getBlockScore('test', digraphs);
+			end
+		end
+		
+		function diProbes = findNgraphs(obj, block)
+			diProbes = cell(obj.params.blockLength, 6);
+			numDiProbes = 0;
+			prevRow = {[], [], [], []};
+			for ii = 1:obj.params.blockLength
+				currRow = block(ii,:);
+				if isDigraph(prevRow, currRow)
+					diProbes(ii,:) = ...
 						FeatureExtractor.createDiProbe(prevRow, currRow);
-					score = matcher.getSimpleDiScore(diProbe);
-					newTrust = trustModel.alterTrust(score);
-				end
-				trustProgress(jj) = newTrust;
-				% Reset trust level to 100 if it has dropped below lockout.
-				if newTrust < obj.params.lockout
-					trustModel.trust = 100;
+					numDiProbes = numDiProbes + 1;
 				end
 				prevRow = currRow;
 			end
-			avgActions = obj.avgActions(trustProgress, obj.params);
+			diProbes(all(cellfun(@isempty,diProbes),2),:) = [];
 		end
 	end
 end

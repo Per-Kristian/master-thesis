@@ -51,7 +51,7 @@ classdef FeatureExtractor
 				% Find rows containing the current unique digraph
 				occurIndices = find(iUniq == ii & validValues);
 				[pp,pr,rp,rr] = ... 
-					FeatureExtractor.getRefLats(occurIndices, keystrokes);
+					FeatureExtractor.getDigraphLats(occurIndices, keystrokes);
 				%Return digraphs with latencies
 				digraphActions(ii,3:6) = ...
 					{nanmean(pp),nanmean(pr),nanmean(rp),nanmean(rr)};
@@ -82,7 +82,7 @@ classdef FeatureExtractor
 			probe{6} = rr;
 		end
 		
-		function [pps,prs,rps,rrs] = getRefLats(occurIndices, keystrokes)
+		function [pps,prs,rps,rrs] = getDigraphLats(occurIndices, keystrokes)
 			pps = zeros(1, length(occurIndices));
 			prs = zeros(1, length(occurIndices));
 			rps = zeros(1, length(occurIndices));
