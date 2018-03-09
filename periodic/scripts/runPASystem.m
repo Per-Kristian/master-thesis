@@ -1,9 +1,9 @@
 function runPASystem(user, imposter, probeSets, setType, monoRefs, ...
 	diRefs, fast, paramnote, resultnote)
 
-params.type = 'simpleSMD';
 params.note = paramnote;
-params.blockLength = 50;
+params.blockLength = 250;
+params.absThresh = 1.25;
 
 PArunner = PARunner(user, imposter, params, probeSets, setType, monoRefs, ...
 	diRefs, fast, resultnote);

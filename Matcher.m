@@ -5,6 +5,7 @@ classdef Matcher < handle
 	properties
 		monoRef
 		diRef
+		diRefRP
 	end
 	
 	methods
@@ -20,6 +21,7 @@ classdef Matcher < handle
 			if nargin>0
 				obj.monoRef = varargin{1};
 				obj.diRef = varargin{2};
+				obj.diRefRP = varargin{3};
 			end
 		end
 		
@@ -103,24 +105,64 @@ classdef Matcher < handle
 		end
 		
 		function score = getBlockScore(obj, monographs, digraphs)
+			sharedMonos = obj.getSharedMonos(monographs);
+			sharedDis = obj.getSharedDigraphs(digraphs);
 			
-			absDist = obj.getAbsoluteDistance(monographs, digraphs);
-			relDist = obj.getRelativeDistance(monographs, digraphs);
+			nums.monos = size(sharedMonos.probe,1);
+			nums.dis = size(sharedDis.probe,1);
+			means.monos = [sharedMonos.ref(:,3), sharedMonos.probe(:,3)];
+			means.diPP = [sharedDis.ref(:,3), sharedDis.probe(:,3)];
+			means.diRP = [sharedDis.ref(:,5), sharedDis.probe(:,5)];
+			
+			absDist = obj.getAbsoluteDistance(means, nums);
+			relDist = obj.getRelativeDistance(means, nums);
+			
 			score = mean([absDist, relDist]);
 		end
 		
-		function dist = getAbsoluteDistance(obj, monographs, digraphs)
-			%[sharedMonoRef, sharedMonoProbe] = obj.getSharedMonos(monographs);
-			[sharedDiRef, sharedDiProbe] = obj.getSharedDigraphs(digraphs);
+		function dist = getRelativeDistance(obj, means, nums)
+			monoDist = obj.getPartialRelDist(means.monos);
+			diPPDist = obj.getPartialRelDist(means.diPP);
+			diRPDist = obj.getPartialRelDist(means.diRP);
+			
+			mostShared = max(nums.monos, nums.dis);
 			
 		end
 		
-		function shared = getSharedMonos(obj, monographs)
-			shared = ismember(obj.monoRef, monographs);
+		function dist = getPartialRelDistance(obj, means)
+			
 		end
 		
-		function [sharedRef,sharedProbe] = getSharedDigraphs(obj, digraphs)
-			refIndices = zeros(size(digraphs,1),1);
+		function dist = getAbsoluteDistance(obj, means, nums)
+			
+			monoDist = obj.getPartialAbsDist(means.monos);
+			diPPDist = obj.getPartialAbsDist(means.diPP);
+			diRPDist = obj.getPartialAbsDist(means.diRP);
+			
+			mostShared = max(nums.monos, nums.dis);
+			
+			dist = monoDist*(nums.monos/mostShared) + ...
+				diPPDist*(nums.dis/mostShared) + ... 
+				diRPDist*(nums.dis/mostShared);
+		end
+		
+		function getPartialAbsDist(obj, means)
+			sortedMeans = sort(cell2mat(means),2);
+			comparisons = sortedMeans(:,2) ./ sortedMeans(:,1);
+			
+			similars = comparisons < 1.25;
+			monoDist = 1 - sum(nonzeros(similars))/numSharedMono;
+		end
+		
+		function sharedMonos = getSharedMonos(obj, monographs)
+			sharedLogical = ismember(obj.monoRef(:,1), monographs(:,1));
+			sharedMonos.ref = obj.monoRef(sharedLogical,:);
+			sharedLogical = ismember(monographs(:,1), obj.monoRef(:,1));
+			sharedMonos.probe = monographs(sharedLogical,:);
+		end
+		
+		function sharedDigraphs = getSharedDigraphs(obj, digraphs)
+			refIndices = NaN(size(digraphs,1),1);
 			probeIndices = false(size(digraphs,1),1);
 			for kk = 1:length(refIndices)
 				index = find(strcmp(obj.diRef(:,1), digraphs{kk,1}) & ...
@@ -130,8 +172,8 @@ classdef Matcher < handle
 					probeIndices(kk) = true;
 				end
 			end
-			sharedRef = obj.diRef(refIndices(nonzeros(refIndices)),:);
-			sharedProbe = digraphs(probeIndices);
+			sharedDigraphs.ref = obj.diRef(refIndices(~isnan(refIndices)),:);
+			sharedDigraphs.probe = digraphs(probeIndices,:);
 		end
 		
 		%{

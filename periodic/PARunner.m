@@ -149,8 +149,9 @@ classdef PARunner < handle
 				lastBlockRow = ii+obj.params.blockLength-1;
 				block = probeSet(ii:lastBlockRow, :);
 				%digraphs = obj.findNgraphs(block);
+				monographs = FeatureExtractor.extractSingleActions(block);
 				digraphs = FeatureExtractor.extractDigraphActions(block, true);
-				score = matcher.getBlockScore('test', digraphs);
+				score = matcher.getBlockScore(monographs, digraphs);
 			end
 		end
 		
