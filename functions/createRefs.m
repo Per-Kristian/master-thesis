@@ -3,6 +3,5 @@ function createRefs(user, keystrokes, full)
 % references.
 monoRef = FeatureExtractor.extractSingleActions(keystrokes);
 diRef = FeatureExtractor.extractDigraphActions(keystrokes, full);
-diRef = sortrows(diRef, 3);
 FileIO.writeRefs(user, monoRef, diRef, full);
 end

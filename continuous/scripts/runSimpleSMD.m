@@ -22,7 +22,7 @@ params.type = 'simpleSMD';
 params.note = paramnote;
 
 runner = Runner(user, imposter, params, probeSets, setType, monoRefs, ...
-	diRefs, fast, resultnote);
+	diRefs, fast, resultnote, 'CA_simpleSMD');
 runner.run();
 
 toc

@@ -16,12 +16,13 @@ classdef Runner < handle
 		numImps
 		fast
 		resultNote
+		systemType
 	end
 	
 	methods
 		function obj = Runner(user, imposter, params, probeSets, setType, ...
-				monoRefs, diRefs, fast, resultNote)
-			obj.db = DBAccess();
+				monoRefs, diRefs, fast, resultNote, systemType)
+			obj.db = DBAccess(systemType);
 			obj.user = user;
 			obj.imposter = imposter;
 			obj.params = params;
@@ -33,11 +34,12 @@ classdef Runner < handle
 			obj.numImps = obj.numUsers-1;
 			obj.fast = fast;
 			obj.resultNote = resultNote;
+			obj.systemType = systemType;
 		end
 		
 		function run(obj)
-			obj.paramsID = obj.db.insertParams(obj.params);
 			if strcmp(obj.user, 'all')
+				obj.paramsID = obj.db.insertParams(obj.params);
 				results = obj.allUsers();
 				obj.db.insertResults(results, obj.paramsID, obj.resultNote);
 			else
@@ -95,7 +97,9 @@ classdef Runner < handle
 		function singleUser(obj)
 			userName = getUserName(obj.user);
 			fprintf('Processing %s..\n', userName);
-			obj.processImposters(userName);
+			tic
+			currAvgVals = obj.processImposters(userName);
+			toc
 		end
 		
 		function currAvgVals = processImposters(obj,userName)
@@ -129,10 +133,11 @@ classdef Runner < handle
 					[avgActions, trustProgress] = ...
 					obj.simulate(monoRef, diRef, probeSet);
 				end
-				FileIO.writeSingleResult(userName, imposterName, ...
-					obj.params.type, obj.paramsID, ...
-					obj.numUsers, trustProgress, avgActions, obj.fast);
-				currAvgVals = [obj.imposter, length(obj.probeSets.(imposterName))];
+				%FileIO.writeSingleResult(userName, imposterName, ...
+				%	obj.params.type, obj.paramsID, ...
+				%	obj.numUsers, trustProgress, avgActions, obj.fast);
+				currAvgVals = [obj.imposter, avgActions, ...
+					length(obj.probeSets.(imposterName))];
 			end
 		end
 		
@@ -225,6 +230,7 @@ classdef Runner < handle
 						prevRow{4} < FeatureExtractor.maxFlightTime
 					diProbe = ...
 						FeatureExtractor.createDiProbe(prevRow, currRow);
+					diProbe{1} = strcat(diProbe{1}, diProbe{2});
 					score = matcher.getSimpleDiScore(diProbe);
 					newTrust = trustModel.alterTrust(score);
 				end

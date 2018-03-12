@@ -7,10 +7,10 @@ classdef DBAccess
 	end
 	
 	methods
-		function obj = DBAccess()
+		function obj = DBAccess(systemType)
 			%DBACCESS Construct an instance of this class
 			%   Loads config from outside the repo's scope.
-			obj.conf = FileIO.getDbConf();
+			obj.conf = FileIO.getDbConf(systemType);
 		end
 		
 		function paramID = insertParams(obj, params)

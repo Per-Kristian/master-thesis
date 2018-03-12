@@ -18,9 +18,9 @@ classdef Matcher < handle
 		function obj = Matcher(varargin)
 			%MATCHER Construct an instance of this class
 			%   Expects references formatted by FeatureExtractor.
-			if nargin>0
-				obj.monoRef = varargin{1};
-				obj.diRef = varargin{2};
+			obj.monoRef = varargin{1};
+			obj.diRef = varargin{2};
+			if nargin>2
 				obj.diRefRP = varargin{3};
 			end
 		end
@@ -74,9 +74,42 @@ classdef Matcher < handle
 			end
 		end
 		
+		%{
 		function score = getSimpleDiScore(obj, probe)
 			index = find(strcmp(obj.diRef(:,1), probe{1}) & ...
 				strcmp(obj.diRef(:,2), probe{2}));
+			
+			if isempty(index)
+				score = -2;
+			else
+				refRow = obj.diRef(index, :);	
+				if length(refRow{3}) == 1
+					score = -1;
+				else
+					latMeans = cell2mat(refRow(3:6));
+					latStds = cell2mat(refRow(7:10));
+					dists = NaN(1,4);
+					for ii = 1:4
+						diff = abs(probe{ii+2}-latMeans(ii));
+						% Handle edge cases where the feature matches the exact
+						% expected value. Also, handle cases where stdv is 0.
+						if diff == 0
+							diff = 0.0001;
+						end
+						if latStds(ii) == 0
+							latStds(ii) = 0.1;
+						end
+						dists(ii) = diff/latStds(ii);
+					end
+					score = mean(dists);
+				end
+			end
+		end
+		%}
+		
+		function score = getSimpleDiScore(obj, probe)
+			index = find(strcmp(obj.diRef(:,1), probe{1}));
+			
 			if isempty(index)
 				score = -2;
 			else
@@ -123,6 +156,7 @@ classdef Matcher < handle
 		function dist = getRelativeDistance(obj, means, nums)
 			monoDist = obj.getPartialRelDist(means.monos);
 			diPPDist = obj.getPartialRelDist(means.diPP);
+			RPsorted = obj.diRefRP;
 			diRPDist = obj.getPartialRelDist(means.diRP);
 			
 			mostShared = max(nums.monos, nums.dis);
@@ -134,7 +168,6 @@ classdef Matcher < handle
 		end
 		
 		function dist = getAbsoluteDistance(obj, means, nums)
-			
 			monoDist = obj.getPartialAbsDist(means.monos);
 			diPPDist = obj.getPartialAbsDist(means.diPP);
 			diRPDist = obj.getPartialAbsDist(means.diRP);
@@ -162,6 +195,7 @@ classdef Matcher < handle
 		end
 		
 		function sharedDigraphs = getSharedDigraphs(obj, digraphs)
+			%{
 			refIndices = NaN(size(digraphs,1),1);
 			probeIndices = false(size(digraphs,1),1);
 			for kk = 1:length(refIndices)
@@ -172,8 +206,15 @@ classdef Matcher < handle
 					probeIndices(kk) = true;
 				end
 			end
+			
 			sharedDigraphs.ref = obj.diRef(refIndices(~isnan(refIndices)),:);
 			sharedDigraphs.probe = digraphs(probeIndices,:);
+			%}
+			digraphs(:,1) = strcat(digraphs(:,1), digraphs(:,2));
+			sharedLogical = ismember(obj.diRef(:,1), digraphs(:,1));
+			sharedDigraphs.ref = obj.diRef(sharedLogical,:);
+			sharedLogical = ismember(digraphs(:,1), obj.diRef(:,1));
+			sharedDigraphs.probe = digraphs(sharedLogical,:);
 		end
 		
 		%{
