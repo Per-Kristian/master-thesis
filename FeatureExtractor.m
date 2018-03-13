@@ -45,7 +45,11 @@ classdef FeatureExtractor
 				digraphActions = cell(length(uStrings),10);
 			end
 			uStringsCell = cellstr(uStrings);
-			digraphActions(:, 1:2) = uStringsCell(:, 1:2);
+			% todo: remove column two, and correct the usage in matcher etc
+			
+			digraphActions(:, 1) = strcat(uStringsCell(:, 1), uStringsCell(:,2));
+			digraphActions(:, 2) = uStringsCell(:, 2);
+			
 
 			for ii = 1:length(uStrings)
 				% Find rows containing the current unique digraph

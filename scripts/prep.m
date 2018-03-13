@@ -9,4 +9,4 @@ for ii = 1:numFiles
 	testSets.(userName) = FileIO.readTestSet(ii);
 	validSets.(userName) = FileIO.readValidationSet(ii);
 end
-clearvars -except diRefs diRefSortFlight monoRefs testSets validSets;
+clearvars -except diRefs diRefSortFlight diRefSortPP monoRefs testSets validSets;

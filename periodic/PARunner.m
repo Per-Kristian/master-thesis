@@ -100,7 +100,7 @@ classdef PARunner < handle
 		
 		function currAvgVals = processImposters(obj,userName)
 			monoRef = obj.monoRefs.(userName);
-			diRefPP = obj.diRefs.(userName);
+			diRef = obj.diRefs.(userName);
 
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
@@ -111,9 +111,8 @@ classdef PARunner < handle
 						[avgActions, trustProgress] = ...
 							obj.fastProcess(userName, imposterName);
 					else
-						diRefFlight = sortrows(diRefPP, 5);
 						[fmr, fnmr] = ...
-							obj.simulate(monoRef, diRefPP, diRefFlight, probeSet);
+							obj.simulate(monoRef, diRef, probeSet);
 					end
 					%FileIO.writeSingleResult(userName, imposterName, ...
 					%	obj.params.type, obj.paramsID, ...
@@ -127,8 +126,7 @@ classdef PARunner < handle
 					[fmr, fnmr] = obj.fastProcess(userName, imposterName);
 				else
 					probeSet = obj.probeSets.(imposterName);
-					diRefFlight = sortrows(diRefPP, 5);
-					[fmr,fnmr] = obj.simulate(monoRef,diRefPP,diRefFlight,probeSet);
+					[fmr,fnmr] = obj.simulate(monoRef, diRef, probeSet);
 				end
 				%FileIO.writeSingleResult(userName, imposterName, ...
 				%	obj.params.type, obj.paramsID, ...
@@ -138,10 +136,10 @@ classdef PARunner < handle
 		end
 		
 		function [fmr, fnmr] = simulate(obj, ...
-				monoRef, diRefPP, diRefFlight, probeSet)
+				monoRef, diRef, probeSet)
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
-			matcher = Matcher(monoRef, diRefPP, diRefFlight);
+			matcher = Matcher(monoRef, diRef);
 			testLength = length(probeSet);
 			finalRow = testLength-mod(testLength,obj.params.blockLength);
 			

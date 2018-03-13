@@ -5,6 +5,7 @@ classdef Matcher < handle
 	properties
 		monoRef
 		diRef
+		diRefPP
 		diRefRP
 	end
 	
@@ -20,9 +21,13 @@ classdef Matcher < handle
 			%   Expects references formatted by FeatureExtractor.
 			obj.monoRef = varargin{1};
 			obj.diRef = varargin{2};
+			obj.diRefPP = sortrows(obj.diRef, 3);
+			obj.diRefRP = sortrows(obj.diRef, 5);
+			%{
 			if nargin>2
 				obj.diRefRP = varargin{3};
 			end
+			%}
 		end
 		
 		function score = getMonoScores(obj, probe)
@@ -141,50 +146,65 @@ classdef Matcher < handle
 			sharedMonos = obj.getSharedMonos(monographs);
 			sharedDis = obj.getSharedDigraphs(digraphs);
 			
-			nums.monos = size(sharedMonos.probe,1);
-			nums.dis = size(sharedDis.probe,1);
-			means.monos = [sharedMonos.ref(:,3), sharedMonos.probe(:,3)];
-			means.diPP = [sharedDis.ref(:,3), sharedDis.probe(:,3)];
-			means.diRP = [sharedDis.ref(:,5), sharedDis.probe(:,5)];
+			numShared.monos = size(sharedMonos.probe,1);
+			numShared.dis = size(sharedDis.probe,1);
+			means.monos = [sharedMonos.ref(:,[1 3]), sharedMonos.probe(:,3)];
+			means.diPP = [sharedDis.ref(:,[1 3]), sharedDis.probe(:,3)];
+			means.diRP = [sharedDis.ref(:,[1 5]), sharedDis.probe(:,5)];
 			
-			absDist = obj.getAbsoluteDistance(means, nums);
-			relDist = obj.getRelativeDistance(means, nums);
+			absDist = obj.getAbsoluteDistance(means, numShared);
+			relDist = obj.getRelativeDistance(means, numShared);
 			
 			score = mean([absDist, relDist]);
 		end
 		
-		function dist = getRelativeDistance(obj, means, nums)
+		function dist = getRelativeDistance(obj, means, numShared)
 			monoDist = obj.getPartialRelDist(means.monos);
 			diPPDist = obj.getPartialRelDist(means.diPP);
-			RPsorted = obj.diRefRP;
 			diRPDist = obj.getPartialRelDist(means.diRP);
 			
-			mostShared = max(nums.monos, nums.dis);
-			
+			mostShared = max(numShared.monos, numShared.dis);
+			dist = monoDist*(numShared.monos/mostShared) + ...
+				diPPDist*(numShared.dis/mostShared) + ... 
+				diRPDist*(numShared.dis/mostShared);
 		end
 		
-		function dist = getPartialRelDistance(obj, means)
+		function relDist = getPartialRelDist(obj, means)
+			refMeans = means(:,[1 2]);
+			probeMeans = means(:,[1 3]);
+			sortedRefMeans = sortrows(refMeans,2);
+			sortedProbeMeans = sortrows(probeMeans,2);
+			positions = NaN(size(sortedRefMeans,1),2);
 			
+			for ii = 1:size(sortedProbeMeans,1)
+				index = find(strcmp(sortedRefMeans{ii,1},sortedProbeMeans(:,1)));
+				positions(ii,:) = [ii, index];
+			end
+			
+			differences = abs(diff(positions,[],2));
+			diffLength = length(differences);
+			maxDisorder = ((diffLength^2)-mod(diffLength,2))/2;
+			relDist = sum(differences) / maxDisorder;
 		end
 		
-		function dist = getAbsoluteDistance(obj, means, nums)
-			monoDist = obj.getPartialAbsDist(means.monos);
-			diPPDist = obj.getPartialAbsDist(means.diPP);
-			diRPDist = obj.getPartialAbsDist(means.diRP);
+		function dist = getAbsoluteDistance(obj, means, numShared)
+			monoDist = obj.getPartialAbsDist(means.monos, numShared.monos);
+			diPPDist = obj.getPartialAbsDist(means.diPP, numShared.dis);
+			diRPDist = obj.getPartialAbsDist(means.diRP, numShared.dis);
 			
-			mostShared = max(nums.monos, nums.dis);
+			mostShared = max(numShared.monos, numShared.dis);
 			
-			dist = monoDist*(nums.monos/mostShared) + ...
-				diPPDist*(nums.dis/mostShared) + ... 
-				diRPDist*(nums.dis/mostShared);
+			dist = monoDist*(numShared.monos/mostShared) + ...
+				diPPDist*(numShared.dis/mostShared) + ... 
+				diRPDist*(numShared.dis/mostShared);
 		end
 		
-		function getPartialAbsDist(obj, means)
-			sortedMeans = sort(cell2mat(means),2);
+		function dist = getPartialAbsDist(obj, means, totShared)
+			sortedMeans = sort(cell2mat(means(:,2:3)),2);
 			comparisons = sortedMeans(:,2) ./ sortedMeans(:,1);
 			
 			similars = comparisons < 1.25;
-			monoDist = 1 - sum(nonzeros(similars))/numSharedMono;
+			dist = 1 - sum(nonzeros(similars))/totShared;
 		end
 		
 		function sharedMonos = getSharedMonos(obj, monographs)
@@ -210,7 +230,7 @@ classdef Matcher < handle
 			sharedDigraphs.ref = obj.diRef(refIndices(~isnan(refIndices)),:);
 			sharedDigraphs.probe = digraphs(probeIndices,:);
 			%}
-			digraphs(:,1) = strcat(digraphs(:,1), digraphs(:,2));
+			%digraphs(:,1) = strcat(digraphs(:,1), digraphs(:,2));
 			sharedLogical = ismember(obj.diRef(:,1), digraphs(:,1));
 			sharedDigraphs.ref = obj.diRef(sharedLogical,:);
 			sharedLogical = ismember(digraphs(:,1), obj.diRef(:,1));
