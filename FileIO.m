@@ -142,10 +142,36 @@ classdef FileIO
 			save(toFile, 'scores');
 		end
 		
-		function scores = readScores(userName, imposterName, type, setType)
-			dirPath = fullfile(FileIO.PRESULTS, type, '/scores/', setType, ...
+		function writePAScores(userName, imposterName, type, setType, ...
+				scores, params) %#ok<INUSL>
+			dirPath = fullfile(FileIO.PRESULTS, type, 'scores', ...
+				sprintf('%s_%d_%d', setType, params.blockLength,...
+				params.absThresh), userName);
+			if ~isdir(dirPath)
+				mkdir(dirPath);
+			end
+			toFile = fullfile(dirPath, sprintf('/%s.mat', imposterName));
+			save(toFile, 'scores');
+		end
+		
+		function scores = readScores(userName, imposterName, setType)
+			dirPath = fullfile(FileIO.PRESULTS, 'PA', '/scores/', setType, ...
 				'/', userName);
 			fromFile = fullfile(dirPath,sprintf('/%s.mat',imposterName));
+			if exist(fromFile, 'file') == 2
+				scores = importdata(fromFile);
+			else
+				fprintf('Error, file not found: %s', fromFile);
+				scores = NaN;
+			end
+		end
+		
+		function scores = readPAScores(userName, imposterName, ...
+				setType, params)
+			dirPath = fullfile(FileIO.PRESULTS, 'PA', 'scores', ...
+				sprintf('%s_%d_%d', setType, params.blockLength,...
+				params.absThresh), userName);
+			fromFile = fullfile(dirPath,sprintf('%s.mat',imposterName));
 			if exist(fromFile, 'file') == 2
 				scores = importdata(fromFile);
 			else
@@ -170,8 +196,33 @@ classdef FileIO
 			save(toFile, 'params');
 		end
 		
+		function writePersonalPAParams(userName, classifier, sysParams, params)  %#ok<INUSL>
+			dirPath = fullfile(FileIO.PPERSPARAMS, classifier,...
+				sprintf('%d_%d', sysParams.blockLength,...
+				sysParams.absThresh));
+			
+			if ~isdir(dirPath)
+				mkdir(dirPath);
+			end
+			toFile = fullfile(dirPath, sprintf('/%s.mat', userName));
+			save(toFile, 'params');
+		end
+		
 		function params = readPersonalParams(userName, classifier)
 			dirPath = fullfile(FileIO.PPERSPARAMS, classifier);
+			fromFile = fullfile(dirPath,sprintf('/%s.mat',userName));
+			if exist(fromFile, 'file') == 2
+				params = importdata(fromFile);
+			else
+				fprintf('Error, file not found: %s', fromFile);
+				params = NaN;
+			end
+		end
+		
+		function params = readPersonalPAParams(userName, classifier, sysParams)
+			dirPath = fullfile(FileIO.PPERSPARAMS, classifier,...
+				sprintf('%d_%d', sysParams.blockLength,...
+				sysParams.absThresh));
 			fromFile = fullfile(dirPath,sprintf('/%s.mat',userName));
 			if exist(fromFile, 'file') == 2
 				params = importdata(fromFile);

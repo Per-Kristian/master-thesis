@@ -69,7 +69,7 @@ classdef Runner < handle
 				undetected = obj.countUndetectedImposters(currImpVals);
 				% True if all imposters are at some point locked out.
 				p2 = undetected == 0;
-				category = obj.decideCategory(p1, p2);
+				category = decideCategory(p1, p2);
 				if category == 2 || category == 4
 					indices = find(currImpVals(:,1) == -1);
 					currImpVals(indices,1) = currImpVals(indices,2);
@@ -160,21 +160,6 @@ classdef Runner < handle
 			res = FileIO.readSingleResult(userName, imposterName, ... 
 				obj.params.type, obj.paramsID, obj.numUsers, fast);
 			identical = res.avgActions == avgActions;
-		end
-		
-		function category = decideCategory(obj, p1, p2) %#ok<INUSL>
-			%DECIDECLASS Returns which class the result belongs in.
-			%	Classes:
-			%	(+/+) = 1, (+/-) = 2, (-/+) = 3, (-/-) = 4.
-				if p1 && p2
-					category = 1;
-				elseif p1 && ~p2
-					category = 2;
-				elseif ~p1 && p2
-					category = 3;
-				else
-					category = 4;
-				end
 		end
 		
 		function [num] = countUndetectedImposters(obj, currImpVals) %#ok<INUSL>

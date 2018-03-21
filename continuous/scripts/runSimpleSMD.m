@@ -10,6 +10,7 @@ function runSimpleSMD(user, imposter, probeSets, setType, monoRefs, ...
 %	also be the user themself. In such a case, the 'imposter' is really the
 %	genuine user.
 
+%% TODO: TAKE INTO ACCOUNT THAT WE NOW REMOVE OUTLIERS IN REFERENCE.
 tic
 params.rwrdThreshold = 1.85;
 params.width = 0.28;
