@@ -146,6 +146,36 @@ classdef Matcher < handle
 			sharedMonos = obj.getSharedMonos(monographs);
 			sharedDis = obj.getSharedDigraphs(digraphs);
 			
+			numShared.monosUnique = size(sharedMonos.probe,1);
+			numShared.monosTotal = sum(cellfun(@(x) length(x), ... 
+				sharedMonos.probe(:, 2)));
+			if numShared.monosTotal == 0
+				score = 99;
+			else
+				numShared.diPPsTotal = sum(cellfun(@(x) length(x(~isnan(x))), ... 
+					sharedDis.probe(:, 11)));
+				numShared.diRPsTotal = sum(cellfun(@(x) length(x(~isnan(x))), ... 
+					sharedDis.probe(:, 13)));
+				numShared.disUnique = size(sharedDis.probe,1);
+				
+				weights.monos = numShared.monosTotal;
+				weights.diPPs = numShared.diPPsTotal / 2;
+				weights.diRPs = numShared.diRPsTotal / 2;
+				
+				means.monos = [sharedMonos.ref(:,[1 3]), sharedMonos.probe(:,3)];
+				means.diPPs = [sharedDis.ref(:,[1 3]), sharedDis.probe(:,3)];
+				means.diRPs = [sharedDis.ref(:,[1 5]), sharedDis.probe(:,5)];
+				
+				absDist = obj.getAbsoluteDistance(means, numShared, weights);
+				relDist = obj.getRelativeDistance(means, numShared, weights);
+				
+				score = absDist + relDist;
+			end
+		end
+		%{
+		function score = getBlockScoreMonosOnly(obj, monographs)
+			sharedMonos = obj.getSharedMonos(monographs);
+			
 			%numShared.monos = size(sharedMonos.probe,1);
 			numShared.monos = sum(cellfun(@(x) length(x), ... 
 				sharedMonos.probe(:, 2)));
@@ -153,43 +183,40 @@ classdef Matcher < handle
 				score = 99;
 			else
 				%numShared.dis = size(sharedDis.probe,1);
-				numShared.diPPs = sum(cellfun(@(x) length(x(~isnan(x))), ... 
-					sharedDis.probe(:, 11)))/2;
-				numShared.diRPs = sum(cellfun(@(x) length(x(~isnan(x))), ... 
-					sharedDis.probe(:, 13)))/2;
 				means.monos = [sharedMonos.ref(:,[1 3]), sharedMonos.probe(:,3)];
-				means.diPP = [sharedDis.ref(:,[1 3]), sharedDis.probe(:,3)];
-				means.diRP = [sharedDis.ref(:,[1 5]), sharedDis.probe(:,5)];
+
 				
 				absDist = obj.getAbsoluteDistance(means, numShared);
 				relDist = obj.getRelativeDistance(means, numShared);
 				
-				score = (absDist * 0.2) + (relDist * 0.8);
+				score = absDist + relDist;
 			end
 		end
+		%}
 		
-		function dist = getRelativeDistance(obj, means, numShared)
+		function dist = getRelativeDistance(obj, means, numShared, weights)
 			monoDist = obj.getPartialRelDist(means.monos);
-			if numShared.diPPs == 0
+			if numShared.diPPsUnique == 0
 				diPPDist = 99;
 			else
 				diPPDist = obj.getPartialRelDist(means.diPP);
 			end
 			
-			if numShared.diRPs == 0
+			if numShared.diRPsTotal == 0
 				diRPDist = 99;
 			else
 				diRPDist = obj.getPartialRelDist(means.diRP);
 			end
 			
-			mostShared = max([numShared.monos, numShared.diPPs, numShared.diRPs]);
+			mostShared = max([numShared.monosTotal, numShared.diPPsTotal, ... 
+				numShared.diRPsTotal]);
 			% If only one digraph is shared, relative distance does not apply
-			dist = monoDist*(numShared.monos/mostShared);
-			if numShared.diPPs > 0.5
-				dist = dist + diPPDist*(numShared.diPPs/mostShared);
+			dist = monoDist*(numShared.monosTotal/mostShared);
+			if numShared.diPPsUnique > 1
+				dist = dist + diPPDist*(weights.diPPs/mostShared);
 			end
-			if numShared.diRPs > 0.5
-				dist = dist + diRPDist*(numShared.diRPs/mostShared);
+			if numShared.diRPsUnique > 1
+				dist = dist + diRPDist*(weights.diRPs/mostShared);
 			end
 				%dist = monoDist*(numShared.monos/mostShared) + ...
 				%	diPPDist*(numShared.dis/mostShared) + ...
@@ -214,27 +241,27 @@ classdef Matcher < handle
 			relDist = sum(differences) / maxDisorder;
 		end
 		
-		function dist = getAbsoluteDistance(obj, means, numShared)
-			monoDist = obj.getPartialAbsDist(means.monos, numShared.monos);
-			diPPDist = obj.getPartialAbsDist(means.diPP, numShared.diPPs);
-			diRPDist = obj.getPartialAbsDist(means.diRP, numShared.diRPs);
+		function dist = getAbsoluteDistance(obj, means, numShared, weights)
+			monoDist = obj.getPartialAbsDist(means.monos, numShared.monosUnique);
+			diPPDist = obj.getPartialAbsDist(means.diPP, numShared.diPPsUnique);
+			diRPDist = obj.getPartialAbsDist(means.diRP, numShared.diRPsUnique);
 			
 			mostShared = max([numShared.monos, numShared.diRPs, numShared.diPPs]);
 			
-			dist = monoDist*(numShared.monos/mostShared) + ...
-				diPPDist*(numShared.diPPs/mostShared) + ... 
-				diRPDist*(numShared.diRPs/mostShared);
+			dist = monoDist*(weights.monos/mostShared) + ...
+				diPPDist*(weights.diPPs/mostShared) + ... 
+				diRPDist*(weights.diRPs/mostShared);
 		end
 		
-		function dist = getPartialAbsDist(obj, means, totShared)
-			if totShared == 0
+		function dist = getPartialAbsDist(obj, means, uniqueShared)
+			if uniqueShared == 0
 				dist = 99;
 			else
 				sortedMeans = sort(cell2mat(means(:,2:3)),2);
 				comparisons = sortedMeans(:,2) ./ sortedMeans(:,1);
 				
 				similars = comparisons < 1.25;
-				dist = 1 - sum(nonzeros(similars))/totShared;
+				dist = 1 - sum(nonzeros(similars))/uniqueShared;
 			end
 		end
 		
