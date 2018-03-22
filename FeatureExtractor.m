@@ -83,9 +83,9 @@ classdef FeatureExtractor
 			digraphActions = digraphActions(~any(isnan(meanCol),2),:);
 		end
 		
-		function digraphActions = extractPAngraphs(keystrokes,full,numDiLats)
+		function digraphActions = extractPAngraphs(keystrokes,full)
 			% Store strings in one cell string:
-			[uStrings, iUniq] = getUniqueDigraphs(keystrokes);
+			[uStrings, iUniq] = FeatureExtractor.getUniqueDigraphs(keystrokes);
 			Values = cell2mat(keystrokes(:, [2, 4]));
 			validValues = Values(:, 2) < FeatureExtractor.maxFlightTime;
 			% Pre-allocate memory for cell array
@@ -104,8 +104,7 @@ classdef FeatureExtractor
 				% Find rows containing the current unique digraph
 				occurIndices = find(iUniq == ii & validValues);
 				[ppO,~,rpO,~] = ... These include outliers.
-					FeatureExtractor.getDigraphLats(occurIndices, keystrokes, ...
-					numDiLats);
+					FeatureExtractor.getDigraphLats(occurIndices, keystrokes);
 				if length(ppO) > 1
 					pp = FeatureExtractor.removeOutliers(ppO);
 					rp = FeatureExtractor.removeOutliers(rpO);

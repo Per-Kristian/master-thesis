@@ -16,5 +16,5 @@ for ii = 1:numUsers
 	scores = PArunner.simulate(monoRef, diRef, validSets.(userName));
 	persParams.meanScore = nanmean(scores);
 	fprintf("Storing %s's threshold: %d\n", userName, persParams.meanScore);
-	%FileIO.writePersonalPAParams(userName, 'PA', params, persParams);
+	FileIO.writePersonalPAParams(userName, 'PA', params, persParams);
 end

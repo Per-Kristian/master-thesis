@@ -1,4 +1,4 @@
-function calcAllPAScores(monoRefs, diRefs, probeSets, paramsID)
+function calcAllPAScores(monoRefs, diRefs, probeSets)
 %CALCALLPASCORES Summary of this function goes here
 %   Detailed explanation goes here
 numUsers = numel(fieldnames(probeSets));
@@ -7,7 +7,7 @@ params.absThresh = 1.25;
 
 runner = PARunner('all', 'all', params, probeSets, 'test', monoRefs, ...
 	diRefs, false, '');
-for ii = 1:numUsers
+for ii = 19:numUsers
 	userName = getUserName(ii);
 	fprintf('Calculating scores for %s\n', userName);
 	tic

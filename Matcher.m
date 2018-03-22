@@ -164,7 +164,7 @@ classdef Matcher < handle
 				absDist = obj.getAbsoluteDistance(means, numShared);
 				relDist = obj.getRelativeDistance(means, numShared);
 				
-				score = absDist + relDist;
+				score = (absDist * 0.2) + (relDist * 0.8);
 			end
 		end
 		

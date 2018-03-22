@@ -43,7 +43,7 @@ classdef PARunner < handle
 			if strcmp(obj.user, 'all')
 				results = obj.allUsers();
 				if useDB
-					%obj.db.insertResults(results, obj.paramsID, obj.resultNote);
+					obj.db.insertResults(results, obj.paramsID, obj.resultNote);
 				end
 			else
 				results = obj.singleUser();
@@ -66,7 +66,7 @@ classdef PARunner < handle
 				block = probeSet(blockStart:blockEnd, :);
 				
 				monographs = FeatureExtractor.extractSingleActions(block);
-				digraphs = FeatureExtractor.extractDigraphActions(block, true);
+				digraphs = FeatureExtractor.extractPAngraphs(block, true);
 				blockScores(ii) = matcher.getBlockScore(monographs, digraphs);
 			end
 			scores = blockScores(~isnan(blockScores));
