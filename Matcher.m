@@ -196,27 +196,21 @@ classdef Matcher < handle
 		
 		function dist = getRelativeDistance(obj, means, numShared, weights)
 			monoDist = obj.getPartialRelDist(means.monos);
-			if numShared.diPPsUnique == 0
+			if numShared.disUnique == 0
 				diPPDist = 99;
-			else
-				diPPDist = obj.getPartialRelDist(means.diPP);
-			end
-			
-			if numShared.diRPsTotal == 0
 				diRPDist = 99;
 			else
-				diRPDist = obj.getPartialRelDist(means.diRP);
+				diPPDist = obj.getPartialRelDist(means.diPPs);
+				diRPDist = obj.getPartialRelDist(means.diRPs);
 			end
 			
 			mostShared = max([numShared.monosTotal, numShared.diPPsTotal, ... 
 				numShared.diRPsTotal]);
 			% If only one digraph is shared, relative distance does not apply
 			dist = monoDist*(numShared.monosTotal/mostShared);
-			if numShared.diPPsUnique > 1
-				dist = dist + diPPDist*(weights.diPPs/mostShared);
-			end
-			if numShared.diRPsUnique > 1
-				dist = dist + diRPDist*(weights.diRPs/mostShared);
+			if numShared.disUnique > 1
+				dist = dist + (diPPDist*(weights.diPPs/mostShared)) + ...
+					(diRPDist*(weights.diRPs/mostShared));
 			end
 				%dist = monoDist*(numShared.monos/mostShared) + ...
 				%	diPPDist*(numShared.dis/mostShared) + ...
@@ -243,10 +237,11 @@ classdef Matcher < handle
 		
 		function dist = getAbsoluteDistance(obj, means, numShared, weights)
 			monoDist = obj.getPartialAbsDist(means.monos, numShared.monosUnique);
-			diPPDist = obj.getPartialAbsDist(means.diPP, numShared.diPPsUnique);
-			diRPDist = obj.getPartialAbsDist(means.diRP, numShared.diRPsUnique);
+			diPPDist = obj.getPartialAbsDist(means.diPPs, numShared.disUnique);
+			diRPDist = obj.getPartialAbsDist(means.diRPs, numShared.disUnique);
 			
-			mostShared = max([numShared.monos, numShared.diRPs, numShared.diPPs]);
+			mostShared = max([numShared.monosTotal, numShared.diRPsTotal, ...
+				numShared.diPPsTotal]);
 			
 			dist = monoDist*(weights.monos/mostShared) + ...
 				diPPDist*(weights.diPPs/mostShared) + ... 
