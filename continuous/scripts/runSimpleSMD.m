@@ -19,7 +19,6 @@ params.maxPen = 1;
 params.singleOccScore = 3;
 params.missingScore = 3.3;
 params.lockout = 90;
-params.type = 'simpleSMD';
 params.note = paramnote;
 
 runner = Runner(user, imposter, params, probeSets, setType, monoRefs, ...

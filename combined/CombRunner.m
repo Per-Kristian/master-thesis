@@ -1,8 +1,8 @@
-classdef Runner < handle
-	%RUNNER Summary of this class goes here
+classdef CombRunner < handle
+	%COMBRUNNER Summary of this class goes here
 	%   Detailed explanation goes here
 	
-	properties (SetAccess=private)
+	properties
 		db
 		user
 		imposter
@@ -17,15 +17,18 @@ classdef Runner < handle
 		fast
 		resultNote
 		systemType
+		CAType
 	end
 	
 	methods
-		function obj = Runner(user, imposter, params, probeSets, setType, ...
-				monoRefs, diRefs, fast, resultNote, systemType)
+		function obj = CombRunner(user, imposter, CAParams, PAParams, ...
+				probeSets, setType, monoRefs, diRefs, fast, resultNote, ...
+				systemType, CAType)
 			obj.db = DBAccess(systemType);
 			obj.user = user;
 			obj.imposter = imposter;
-			obj.params = params;
+			obj.CAParams = CAParams;
+			obj.PAParams = PAParams;
 			obj.probeSets = probeSets;
 			obj.setType = setType;
 			obj.monoRefs = monoRefs;
@@ -34,7 +37,7 @@ classdef Runner < handle
 			obj.numImps = obj.numUsers-1;
 			obj.fast = fast;
 			obj.resultNote = resultNote;
-			obj.systemType = systemType;
+			obj.CAType = CAType;
 		end
 		
 		function run(obj)
@@ -47,6 +50,7 @@ classdef Runner < handle
 			end
 		end
 	end
+	
 	methods (Access = private)
 		function results = allUsers(obj)
 			allImpVals = zeros(obj.numUsers*obj.numImps, 1);
@@ -105,6 +109,10 @@ classdef Runner < handle
 		function currAvgVals = processImposters(obj,userName)
 			monoRef = obj.monoRefs.(userName);
 			diRef = obj.diRefs.(userName);
+			storedPAParams = FileIO.readPersonalPAParams(userName,'PA', ...
+				obj.params);
+			lockout = storedPAParams.meanScore + obj.params.tolerance;
+			
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
@@ -117,9 +125,9 @@ classdef Runner < handle
 					[avgActions, trustProgress] = ...
 						obj.simulate(monoRef, diRef, probeSet);
 					end
-					FileIO.writeSingleResult(userName, imposterName, ...
-						obj.systemType, obj.paramsID, ...
-						obj.numUsers, trustProgress, avgActions, obj.fast);
+					%FileIO.writeSingleResult(userName, imposterName, ...
+					%	obj.systemType, obj.paramsID, ...
+					%	obj.numUsers, trustProgress, avgActions, obj.fast);
 					currAvgVals(currImposter,:) = ...
 						[avgActions, length(probeSet)];
 				end
@@ -141,27 +149,6 @@ classdef Runner < handle
 			end
 		end
 		
-		function [anga, notLocked] = getANGA(obj, row) %#ok<INUSL>
-			%GETANGA Return current user's ANGA. If they were never locked
-			%out, notLocked is true.
-			if row(1) == -1
-				anga = row(2);
-				notLocked = true;
-			else
-				anga = row(1);
-				notLocked = false;
-			end
-		end
-		
-		function identical = compareToOld(obj, userName, imposterName, ...
-				avgActions, fast)
-			%COMPARETOOLD Function for debugging. Compares a single result
-			%against an older one.
-			res = FileIO.readSingleResult(userName, imposterName, ... 
-				obj.systemType, obj.paramsID, obj.numUsers, fast);
-			identical = res.avgActions == avgActions;
-		end
-		
 		function [num] = countUndetectedImposters(obj, currImpVals) %#ok<INUSL>
 			undetected = currImpVals(currImpVals(:,1) == -1, :);
 			num = size(undetected,1);
@@ -175,18 +162,18 @@ classdef Runner < handle
 			diCol = 2;
 			userParams = obj.params;
 			if isnan(userParams.lockout)
-				storedParams = FileIO.readPersonalParams(userName, obj.systemType);
+				storedParams = FileIO.readPersonalParams(userName,obj.CAType);
 				userParams.lockout = storedParams.threshold;
 			end
-			scores = FileIO.readScores(userName, imposterName, ...
-				obj.systemType, obj.setType);
-			scoresLength = length(scores);
-			trustProgress = zeros(length(scores), 1);
+			CAscores = FileIO.readScores(userName, imposterName, ...
+				obj.CAType, obj.setType);
+			scoresLength = length(CAscores);
+			trustProgress = zeros(length(CAscores), 1);
 			trustModel = TrustModel(userParams);
 			for jj = 1:scoresLength
-				newTrust = trustModel.alterTrust(scores(jj,monoCol));
-				if ~isnan(scores(jj,diCol))
-					newTrust = trustModel.alterTrust(scores(jj, diCol));
+				newTrust = trustModel.alterTrust(CAscores(jj,monoCol));
+				if ~isnan(CAscores(jj,diCol))
+					newTrust = trustModel.alterTrust(CAscores(jj, diCol));
 				end
 				trustProgress(jj) = newTrust;
 				if newTrust < userParams.lockout
@@ -201,28 +188,42 @@ classdef Runner < handle
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
 			matcher = Matcher(monoRef, diRef);
-			testLength = length(probeSet);
+			probeSetLength = length(probeSet);
 			trustModel = TrustModel(obj.params);
-			trustProgress = zeros(testLength, 1);
+			trustProgress = NaN(probeSetLength, 2);
 			prevRow = {[], [], [], []};
 			
-			for jj = 1:testLength
-				currRow = probeSet(jj,:);
-				score = matcher.getSimpleMonoScore(currRow(1:2));
-				newTrust = trustModel.alterTrust(score);
-				% Check previous row
-				if strcmp(prevRow{3}, currRow{1}) && ...
-						prevRow{4} < FeatureExtractor.maxFlightTime
-					diProbe = FeatureExtractor.createDiProbe(prevRow, currRow);
-					score = matcher.getSimpleDiScore(diProbe);
+			numBlocks = floor(probeSetLength / obj.params.blockLength);
+			blockScores = zeros(numBlocks,1);
+			
+			for ii = 1:numBlocks
+				blockEnd = ii * obj.params.blockLength;
+				blockStart = blockEnd - obj.params.blockLength + 1;
+				blockDiProbes = cell(obj.params.blockLength, 6);
+				numDiProbes = 0;
+				for jj = blockStart:blockEnd
+					currRow = probeSet(jj,:);
+					
+					score = matcher.getSimpleMonoScore(currRow(1:2));
 					newTrust = trustModel.alterTrust(score);
+					% Check previous row
+					if isDigraph(prevRow, currRow)
+						diProbe = FeatureExtractor.createDiProbe(prevRow, currRow);
+						score = matcher.getSimpleDiScore(diProbe);
+						newTrust = trustModel.alterTrust(score);
+						%Store the probe for use in periodic authentication.
+						numDiProbes = numDiProbes + 1;
+						blockDiProbes(numDiProbes, :) = diProbe;
+					end
+					trustProgress(jj,1) = newTrust;
+					% Reset trust level to 100 if it has dropped below lockout.
+					if newTrust < obj.params.lockout
+						trustModel.trust = 100;
+					end
+					prevRow = currRow;
 				end
-				trustProgress(jj) = newTrust;
-				% Reset trust level to 100 if it has dropped below lockout.
-				if newTrust < obj.params.lockout
-					trustModel.trust = 100;
-				end
-				prevRow = currRow;
+				% Convert blockDiProbes to a single block probe.
+				% Progress: was going to impl. FE.diProbesToBlockProbe
 			end
 			avgActions = obj.avgActions(trustProgress, obj.params);
 		end
@@ -259,3 +260,4 @@ classdef Runner < handle
 		end
 	end
 end
+

@@ -1,9 +1,9 @@
 numUsers = numel(fieldnames(monoRefs));
-params.blockLength = 500;
+params.blockLength = 250;
 params.absThresh = 1.25;
 
 PArunner = PARunner('all', 'all', params, validSets, 'valid', monoRefs, ...
-	diRefs, false, 'Without Outliers');
+	diRefs, false, 'Outliers Removed, bug fixed.');
 
 for ii = 1:numUsers
 	userName = getUserName(ii);

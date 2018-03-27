@@ -3,6 +3,7 @@ classdef PARunner < handle
 	%   Detailed explanation goes here
 	
 	properties
+		systemType
 		db
 		user
 		imposter
@@ -21,7 +22,8 @@ classdef PARunner < handle
 	methods
 		function obj = PARunner(user, imposter, params, probeSets, setType, ...
 				monoRefs, diRefs, fast, resultNote)
-			obj.db = DBAccess('PA');
+			obj.systemType = 'PA';
+			obj.db = DBAccess(obj.systemType);
 			obj.user = user;
 			obj.imposter = imposter;
 			obj.params = params;
@@ -175,7 +177,8 @@ classdef PARunner < handle
 			else
 				imposterName = getUserName(obj.imposter);
 				if obj.fast
-					scores = obj.fastProcess(userName, imposterName);
+					scores = FileIO.readPAScores(userName, imposterName, ...
+							obj.setType, obj.params);
 				else
 					probeSet = obj.probeSets.(imposterName);
 					scores = obj.simulate(monoRef, diRef, probeSet);
@@ -187,16 +190,6 @@ classdef PARunner < handle
 				timesLocked = sum(scores > lockout);
 				userResults = [timesLocked, numBlocks];
 			end
-		end
-		
-		function blockScores = fastProcess(obj, userName, ...
-				imposterName)
-			%FASTPROCESS Uses pre-calculated scores to process an imposter
-			%against a user
-			userParams = obj.params;
-			
-			scores = FileIO.readPAScores(userName, imposterName, ...
-				userParams.type, obj.setType, obj.params);
 		end
 		
 		%{

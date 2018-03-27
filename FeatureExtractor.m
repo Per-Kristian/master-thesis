@@ -132,13 +132,17 @@ classdef FeatureExtractor
 			[uStrings, ~, iUniq] = unique(string(Strings), 'rows');
 		end
 		
+		function digraphs = diProbesToBlockProbe(diProbes)
+			
+		end
+		
 		function probe = createDiProbe(digraphRow, nextRow)
 			%CREATEDIPROBE Creates a digraph probe.
 			%	The digraphRow parameter is expected to be the row
 			%	containing BOTH characters in the digraph. nextRow is the
 			%	row after, which is needed to calculate latencies.
 			probe = cell(1,6);
-			probe{1} = digraphRow{1};
+			probe{1} = strcat(digraphRow{1}, digraphRow{3});
 			probe{2} = digraphRow{3};
 			
 			[pp,pr,rp,rr] = FeatureExtractor.calcLats(digraphRow, nextRow);
