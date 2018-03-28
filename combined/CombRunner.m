@@ -6,7 +6,8 @@ classdef CombRunner < handle
 		db
 		user
 		imposter
-		params
+		CAParams
+		PAParams
 		paramsID
 		probeSets
 		setType
@@ -110,8 +111,14 @@ classdef CombRunner < handle
 			monoRef = obj.monoRefs.(userName);
 			diRef = obj.diRefs.(userName);
 			storedPAParams = FileIO.readPersonalPAParams(userName,'PA', ...
-				obj.params);
-			lockout = storedPAParams.meanScore + obj.params.tolerance;
+				obj.PAParams);
+			PALockout = storedPAParams.meanScore + obj.PAParams.tolerance;
+			CAuserParams = obj.CAParams;
+			
+			if isnan(CAuserParams.lockout)
+				storedCAParams = FileIO.readPersonalParams(userName,obj.CAType);
+				CAuserParams.lockout = storedCAParams.threshold;
+			end
 			
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
@@ -119,11 +126,11 @@ classdef CombRunner < handle
 					imposterName = getUserName(currImposter);
 					probeSet = obj.probeSets.(imposterName);
 					if obj.fast
-						[avgActions, trustProgress] = ... 
-							obj.fastProcess(userName, imposterName);
+						[avgActions, trustProgress] = obj.fastProcess(userName, ...
+							imposterName, CAUserParams, PALockout);
 					else
-					[avgActions, trustProgress] = ...
-						obj.simulate(monoRef, diRef, probeSet);
+					[avgActions, trustProgress] = obj.simulate(monoRef, diRef, ...
+						probeSet, CAUserParams, PALockout);
 					end
 					%FileIO.writeSingleResult(userName, imposterName, ...
 					%	obj.systemType, obj.paramsID, ...
@@ -155,33 +162,110 @@ classdef CombRunner < handle
 		end
 		
 		function [avgActions, trustProgress] = fastProcess(obj, userName, ...
-				imposterName)
+				imposterName, CAUserParams, PALockout)
+			monoCol = 1;
+			diCol = 2;
+			
+			CAScores = FileIO.readScores(userName, imposterName, ...
+				obj.CAType, obj.setType);
+						
+			CAScoresLength = length(CAScores);
+			trustProgress = NaN(length(CAScores), 2);
+			trustModel = TrustModel(CAUserParams);
+			lastProcessed = 0;
+			while lastProcessed <= CAScoresLength-obj.PAParams.blockLength
+				blockEnd = lastProcessed + obj.PAParams.blockLength;
+				blockStart = lastProcessed + 1;
+				block = CAScores(blockStart:blockEnd, :);
+				blockTrustProg = fastBlockProcess(block, ...
+					trustModel, CAUserParams.lockout);
+				
+				lastProcessed = lastProcessed + size(blockTrustProg, 1);
+				trustProgress(blockStart:lastProcessed,:);
+			end
+			
+			for ii = 1:numBlocks
+				blockEnd = ii * obj.PAParams.blockLength;
+				blockStart = blockEnd - obj.PAParams.blockLength + 1;
+				CABlock = CAScores(blockStart:blockEnd, :);
+				CABlockTrustProgress = fastCAProcess(CABlock, trustModel, ...
+					CAUserParams.lockout);
+				trustProgress(blockStart:blockEnd,1) = CABlockTrustProgress;
+				if CABlockTrustProgress(end) >= CAUserParams.lockout
+					newTrust = ...
+						trustModel.influence(PAScores(ii), obj.combParams.influence);
+					if newTrust < CAUserParams.lockout
+					trustModel.trust = 100;
+					end
+				end
+			end
+			
+			kk = numBlocks * obj.PAParams.blockLength + 1;
+			while(kk <= CAScoresLength)
+				newTrust = trustModel.alterTrust(CAScores(kk, monoCol));
+			end
+			avgActions = obj.avgActions(trustProgress, CAuserParams);
+		end
+		%{ 
+			This function is flawed, as it does not reset blocks when locked out
+			by the CA system.
+			
+		function [avgActions, trustProgress] = fastProcess(obj, userName, ...
+				imposterName, CAUserParams, PALockout)
 			%FASTPROCESS Uses pre-calculated scores to process an imposter
 			%against a user
 			monoCol = 1;
 			diCol = 2;
-			userParams = obj.params;
-			if isnan(userParams.lockout)
-				storedParams = FileIO.readPersonalParams(userName,obj.CAType);
-				userParams.lockout = storedParams.threshold;
-			end
-			CAscores = FileIO.readScores(userName, imposterName, ...
+			
+			CAScores = FileIO.readScores(userName, imposterName, ...
 				obj.CAType, obj.setType);
-			scoresLength = length(CAscores);
-			trustProgress = zeros(length(CAscores), 1);
-			trustModel = TrustModel(userParams);
-			for jj = 1:scoresLength
-				newTrust = trustModel.alterTrust(CAscores(jj,monoCol));
-				if ~isnan(CAscores(jj,diCol))
-					newTrust = trustModel.alterTrust(CAscores(jj, diCol));
+			PAScores = FileIO.readPAScores(userName, imposterName, ...
+							obj.setType, obj.PAParams);
+						
+			CAScoresLength = length(CAScores);
+			numBlocks = length(PAScores);
+			trustProgress = NaN(length(CAScores), 2);
+			trustModel = TrustModel(CAUserParams);
+			
+			for ii = 1:numBlocks
+				blockEnd = ii * obj.PAParams.blockLength;
+				blockStart = blockEnd - obj.PAParams.blockLength + 1;
+				CABlock = CAScores(blockEnd:blockStart, :);
+				CABlockTrustProgress = fastCAProcess(CABlock, trustModel, ...
+					CAUserParams.lockout);
+				trustProgress(blockStart:blockEnd,1) = CABlockTrustProgress;
+				if CABlockTrustProgress(end) >= CAUserParams.lockout
+					newTrust = ...
+						trustModel.influence(PAScores(ii), obj.combParams.influence);
+					if newTrust < CAUserParams.lockout
+					trustModel.trust = 100;
 				end
-				trustProgress(jj) = newTrust;
-				if newTrust < userParams.lockout
+				
+			end
+			
+			kk = numBlocks * obj.PAParams.blockLength + 1;
+			while(kk <= CAScoresLength)
+				newTrust = trustModel.alterTrust(CAScores(kk, monoCol));
+			end
+			avgActions = obj.avgActions(trustProgress, CAuserParams);
+		end
+		
+		
+		function CAblockTrustProgress = fastCAProcess(block, trustModel, lock)
+			blockLength = length(block);
+			CAblockTrustProgress = NaN(blockLength, 1);
+			for ii = 1:blockLength
+				newTrust = trustModel.alterTrust(CAScores(ii,monoCol));
+				if ~isnan(CAScores(ii,diCol))
+					newTrust = trustModel.alterTrust(CAScores(ii, diCol));
+				end
+				CAblockTrustProgress(ii) = newTrust;
+				if newTrust < lock
 					trustModel.trust = 100;
 				end
 			end
-			avgActions = obj.avgActions(trustProgress, userParams);
 		end
+		%}
 		
 		function [avgActions,trustProgress] = simulate(obj, ...
 				monoRef, diRef, probeSet)

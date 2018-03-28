@@ -10,7 +10,7 @@ for ii = 1:numUsers
 		imposterName = getUserName(jj);
 		probeSet = probeSets.(imposterName);
 		scores = matcher.preCalcSimpleSMDScores(probeSet);
-		FileIO.writeScores(userName, imposterName,'simpleSMD',setType,scores);
+		FileIO.writeScores(userName, imposterName,'CA_simpleSMD',setType,scores);
 	end
 end
 end
