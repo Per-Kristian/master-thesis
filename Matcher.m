@@ -62,11 +62,11 @@ classdef Matcher < handle
 				% If there is only one occurrence in the reference, there
 				% exists no standard deviation, and distance can't be
 				% calculated. Return -1 to indicate this.
-				if length(refRow{2}) == 1
+				if length(refRow{5}) == 1
 					score = -1;
 				else
-					refMean = refRow{3};
-					refStd = refRow{4};
+					refMean = refRow{6};
+					refStd = refRow{7};
 					diff = abs(probe{2}-refMean);
 					if diff == 0
 						diff = 0.0001;
@@ -118,14 +118,14 @@ classdef Matcher < handle
 			if isempty(index)
 				score = -2;
 			else
-				refRow = obj.diRef(index, :);	
-				if length(refRow{3}) == 1
-					score = -1;
-				else
-					latMeans = cell2mat(refRow(3:6));
-					latStds = cell2mat(refRow(7:10));
-					dists = NaN(1,4);
-					for ii = 1:4
+				refRow = obj.diRef(index, :);
+				
+				latMeans = cell2mat(refRow(15:18));
+				latStds = cell2mat(refRow(19:22));
+				dists = NaN(1,4);
+				
+				for ii = 1:4
+					if length(refRow{ii+22}) > 1
 						diff = abs(probe{ii+2}-latMeans(ii));
 						% Handle edge cases where the feature matches the exact
 						% expected value. Also, handle cases where stdv is 0.
@@ -137,7 +137,11 @@ classdef Matcher < handle
 						end
 						dists(ii) = diff/latStds(ii);
 					end
-					score = nanmean(dists);
+				end
+				score = nanmean(dists);
+				if isnan(score)
+					% Indicate that only one occurrence of every lat is found in ref
+					score = -1;
 				end
 			end
 		end

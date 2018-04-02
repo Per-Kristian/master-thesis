@@ -67,8 +67,8 @@ classdef PARunner < handle
 				blockStart = blockEnd - obj.params.blockLength + 1;
 				block = probeSet(blockStart:blockEnd, :);
 				
-				monographs = FeatureExtractor.extractSingleActions(block);
-				digraphs = FeatureExtractor.extractPAngraphs(block, true);
+				monographs = FeatureExtractor.extractPASingleActions(block);
+				digraphs = FeatureExtractor.extractPAngraphs(block);
 				blockScores(ii) = matcher.getBlockScore(monographs, digraphs);
 			end
 			scores = blockScores(~isnan(blockScores));
@@ -151,8 +151,6 @@ classdef PARunner < handle
 		end
 		
 		function userResults = processImposters(obj,userName)
-			monoRef = obj.monoRefs.(userName);
-			diRef = obj.diRefs.(userName);
 			storedParams = FileIO.readPersonalPAParams(userName,'PA', ...
 				obj.params);
 			lockout = storedParams.meanScore + obj.params.tolerance;
@@ -165,6 +163,8 @@ classdef PARunner < handle
 						scores = FileIO.readPAScores(userName, imposterName, ...
 							obj.setType, obj.params);
 					else
+						monoRef = obj.monoRefs.(userName);
+						diRef = obj.diRefs.(userName);
 						scores = obj.simulate(monoRef, diRef, probeSet);
 					end
 					numBlocks = length(scores);
@@ -180,6 +180,8 @@ classdef PARunner < handle
 					scores = FileIO.readPAScores(userName, imposterName, ...
 							obj.setType, obj.params);
 				else
+					monoRef = obj.monoRefs.(userName);
+					diRef = obj.diRefs.(userName);
 					probeSet = obj.probeSets.(imposterName);
 					scores = obj.simulate(monoRef, diRef, probeSet);
 				end

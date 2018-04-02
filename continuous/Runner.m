@@ -174,10 +174,20 @@ classdef Runner < handle
 			monoCol = 1;
 			diCol = 2;
 			userParams = obj.params;
-			if isnan(userParams.lockout)
+			
+			persLockOutFlag = isnan(userParams.lockout);
+			persRwrdThreshFlag = isnan(userParams.rwrdThreshold);
+			if persLockOutFlag || persRwrdThreshFlag
 				storedParams = FileIO.readPersonalParams(userName, obj.systemType);
-				userParams.lockout = storedParams.threshold;
+				if persLockOutFlag
+					userParams.lockout = storedParams.threshold;
+				end
+				if persRwrdThreshFlag
+					userParams.rwrdThreshold = ...
+						storedParams.meanScore + userParams.tolerance;
+				end
 			end
+			
 			scores = FileIO.readScores(userName, imposterName, ...
 				obj.systemType, obj.setType);
 			scoresLength = length(scores);
@@ -190,7 +200,7 @@ classdef Runner < handle
 				end
 				trustProgress(jj) = newTrust;
 				if newTrust < userParams.lockout
-					trustModel.trust = 100;
+					trustModel.resetTrust();
 				end
 			end
 			avgActions = obj.avgActions(trustProgress, userParams);
@@ -220,7 +230,7 @@ classdef Runner < handle
 				trustProgress(jj) = newTrust;
 				% Reset trust level to 100 if it has dropped below lockout.
 				if newTrust < obj.params.lockout
-					trustModel.trust = 100;
+					trustModel.resetTrust();
 				end
 				prevRow = currRow;
 			end

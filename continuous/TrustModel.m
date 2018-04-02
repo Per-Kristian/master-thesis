@@ -36,7 +36,7 @@ classdef TrustModel < handle
 			% Takes a dissimilarity score (number of standard deviations) as 
 			%	input. Calculates a change of trust and sets the new trust level 
 			%	accordingly. Returns new trust level. If the score parameter is -1
-			%	or -2, change it to fixed a fixed score for edge cases.
+			%	or -2, change it to a fixed score for edge cases.
 			if score == -1
 				score = obj.singleOccScore;
 			elseif score == -2
@@ -50,9 +50,30 @@ classdef TrustModel < handle
 			newTrust = obj.trust;
 		end
 		
+		function newTrust = influence(obj, score, inflParams, PALockout)
+			% Takes a score from a periodic authentication, and uses it to
+			% influence the current trust level.
+			if strcmp(inflParams.type, 'decisionLevel')
+				%distToThresh = score-thresh;
+				if score > PALockout
+					delta = inflParams.up;
+				else
+					delta = inflParams.down;
+				end
+				obj.trust = min(max(obj.trust + delta, 0), 100);
+				newTrust = obj.trust;
+			end
+		end
+		
+		function resetTrust(obj)
+			obj.trust = 100;
+		end
+		
+		%{
 		function set.trust(obj,value)
 			obj.trust = value;
 		end
+		%}
 	end
 end
 

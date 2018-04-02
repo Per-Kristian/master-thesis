@@ -17,6 +17,29 @@ classdef FeatureExtractor
 			%   Detailed explanation goes here
 			
 			uniqueChars = unique(keystrokes(:,1));
+			singleActions = cell(length(uniqueChars), 7);
+			
+			for ii=1:length(uniqueChars)
+				singleActions{ii,1} = uniqueChars{ii};
+				%todo: retreive indices from unique instead
+				indices = find(strcmp(keystrokes(:,1), uniqueChars{ii}));
+				allDurs = cell2mat(keystrokes(indices, 2));
+				withoutOutliers = FeatureExtractor.removeOutliers(allDurs);
+				
+				singleActions{ii,2} = withoutOutliers;
+				singleActions{ii,3} = nanmean(withoutOutliers);
+				singleActions{ii,4} = nanstd(withoutOutliers);
+				singleActions{ii,5} = allDurs;
+				singleActions{ii,6} = nanmean(allDurs);
+				singleActions{ii,7} = nanstd(allDurs);
+			end
+		end
+		
+		function singleActions = extractPASingleActions(keystrokes)
+			% METHOD1 Summary of this method goes here
+			%   Detailed explanation goes here
+			
+			uniqueChars = unique(keystrokes(:,1));
 			singleActions = cell(length(uniqueChars), 4);
 			
 			for ii=1:length(uniqueChars)
@@ -25,16 +48,15 @@ classdef FeatureExtractor
 				indices = find(strcmp(keystrokes(:,1), uniqueChars{ii}));
 				allDurs = cell2mat(keystrokes(indices, 2));
 				withoutOutliers = FeatureExtractor.removeOutliers(allDurs);
+				
 				singleActions{ii,2} = withoutOutliers;
-				%singleActions{ii,2} = cell2mat(keystrokes(indices, 2)); this keeps
-				%outliers.
 				singleActions{ii,3} = nanmean(singleActions{ii,2});
 				singleActions{ii,4} = nanstd(singleActions{ii,2});
 			end
 		end
 		
 		function digraphActions = ...
-				extractDigraphActions(keystrokes, full)
+				extractDigraphActions(keystrokes)
 			% Store strings in one cell string:
 			Strings  = keystrokes(:, [1, 3]);
 			[uStrings, ~, iUniq] = unique(string(Strings), 'rows');
@@ -43,11 +65,7 @@ classdef FeatureExtractor
 			validValues = Values(:, 2) < FeatureExtractor.maxFlightTime;
 			%validValues = (Values(:, 1) < 100000);
 			% Pre-allocate memory for cell array
-			if full
-				digraphActions = cell(length(uStrings),14);
-			else
-				digraphActions = cell(length(uStrings),10);
-			end
+			digraphActions = cell(length(uStrings),26);
 			uStringsCell = cellstr(uStrings);
 			% todo: remove column two, and correct the usage in matcher etc
 			digraphActions(:, 1) = strcat(uStringsCell(:, 1), uStringsCell(:,2));
@@ -58,7 +76,7 @@ classdef FeatureExtractor
 				occurIndices = find(iUniq == ii & validValues);
 				[ppO,prO,rpO,rrO] = ... These include outliers.
 					FeatureExtractor.getDigraphLats(occurIndices, keystrokes);
-				if length(ppO) > 1
+				 if length(ppO) > 1
 					pp = FeatureExtractor.removeOutliers(ppO);
 					pr = FeatureExtractor.removeOutliers(prO);
 					rp = FeatureExtractor.removeOutliers(rpO);
@@ -74,26 +92,26 @@ classdef FeatureExtractor
 					{nanmean(pp),nanmean(pr),nanmean(rp),nanmean(rr)};
 				digraphActions(ii,7:10) = ...
 					{nanstd(pp),nanstd(pr),nanstd(rp),nanstd(rr)};
-				if full
-					digraphActions(ii,11:14) = {pp,pr,rp,rr};
-				end
+				digraphActions(ii,11:14) = {pp,pr,rp,rr};
+				
+				digraphActions(ii,15:18) = ...
+					{nanmean(ppO),nanmean(prO),nanmean(rpO),nanmean(rrO)};
+				digraphActions(ii,19:22) = ...
+					{nanstd(ppO),nanstd(prO),nanstd(rpO),nanstd(rrO)};
+				digraphActions(ii,23:26) = {ppO,prO,rpO,rrO};
 			end
 			% remove rows without valid latencies
 			meanCol = cell2mat(digraphActions(:,3));
 			digraphActions = digraphActions(~any(isnan(meanCol),2),:);
 		end
 		
-		function digraphActions = extractPAngraphs(keystrokes,full)
+		function digraphActions = extractPAngraphs(keystrokes)
 			% Store strings in one cell string:
 			[uStrings, iUniq] = FeatureExtractor.getUniqueDigraphs(keystrokes);
 			Values = cell2mat(keystrokes(:, [2, 4]));
 			validValues = Values(:, 2) < FeatureExtractor.maxFlightTime;
 			% Pre-allocate memory for cell array
-			if full
-				digraphActions = cell(length(uStrings),14);
-			else
-				digraphActions = cell(length(uStrings),10);
-			end
+			digraphActions = cell(length(uStrings),14);
 			uStringsCell = cellstr(uStrings);
 			% todo: remove column two, and correct the usage in matcher etc
 			
@@ -115,12 +133,7 @@ classdef FeatureExtractor
 				%Return digraphs with latencies
 				digraphActions(ii,3:6) = {nanmean(pp),[],nanmean(rp),[]};
 				digraphActions(ii,7:10) = {nanstd(pp),[],nanstd(rp),[]};
-				
-				if full
-					%pr = FeatureExtractor.removeOutliers(prO);
-					%rr = FeatureExtractor.removeOutliers(rrO);
-					digraphActions(ii,11:14) = {pp,[],rp,[]};
-				end
+				digraphActions(ii,11:14) = {pp,[],rp,[]};
 			end
 			% remove rows without valid latencies
 			meanCol = cell2mat(digraphActions(:,3));

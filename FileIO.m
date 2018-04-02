@@ -46,32 +46,30 @@ classdef FileIO
 			end
 		end
 		
-		function writeRefs(user, monoRef, diRef, full) %#ok<INUSL>
-			[monoPath, diPath] = FileIO.getRefPaths(full);
+		function writeRefs(user, monoRef, diRef) %#ok<INUSD>
 			userName = getUserName(user);
-			if ~isdir(monoPath)
-				mkdir(monoPath);
+			if ~isdir(FileIO.PMONO)
+				mkdir(FileIO.PMONO);
 			end
-			toFile = fullfile(monoPath,sprintf('%s.mat', userName));
+			toFile = fullfile(FileIO.PMONO,sprintf('%s.mat', userName));
 			save(toFile, 'monoRef');
-			if ~isdir(diPath)
-				mkdir(diPath);
+			if ~isdir(FileIO.PDI)
+				mkdir(FileIO.PDI);
 			end
-			toFile = fullfile(diPath,sprintf('%s.mat', userName));
+			toFile = fullfile(FileIO.PDI,sprintf('%s.mat', userName));
 			save(toFile, 'diRef');
 		end
 		
-		function [monoRef, diRef] = readRefs(user, full)
+		function [monoRef, diRef] = readRefs(user)
 			%	Returns both Monograph and Digraph references.
 			%	[m, d] = fetchRef(3) returns mono- and digraph references
 			%	for user 3.
-			[monoPath, diPath] = FileIO.getRefPaths(full);
 			userName = getUserName(user);
-			fromFile = fullfile(monoPath, sprintf('%s.mat',userName));
+			fromFile = fullfile(FileIO.PMONO, sprintf('%s.mat',userName));
 			if exist(fromFile, 'file') == 2
 				monoRef = importdata(fromFile);
 			end
-			fromFile = fullfile(diPath, sprintf('%s.mat',userName));
+			fromFile = fullfile(FileIO.PDI, sprintf('%s.mat',userName));
 			if exist(fromFile, 'file') == 2
 				diRef = importdata(fromFile);
 			end
@@ -100,7 +98,7 @@ classdef FileIO
 			if fast
 				process = 'fast';
 			else
-				process = 'full';
+				process = 'slow';
 			end
 			resPath = fullfile(FileIO.PRESULTS,type,sprintf('/%d_%d_%s/', ...
 				paramID, numUsers, process));
@@ -154,8 +152,9 @@ classdef FileIO
 			save(toFile, 'scores');
 		end
 		
-		function scores = readScores(userName, imposterName, setType)
-			dirPath = fullfile(FileIO.PRESULTS, 'PA', '/scores/', setType, ...
+		function scores = readScores(userName, imposterName, systemType, ...
+				setType)
+			dirPath = fullfile(FileIO.PRESULTS, systemType, '/scores/', setType, ...
 				'/', userName);
 			fromFile = fullfile(dirPath,sprintf('/%s.mat',imposterName));
 			if exist(fromFile, 'file') == 2

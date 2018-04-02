@@ -1,4 +1,4 @@
-function separateData(user, full)
+function separateData(user, limitFlag)
 %SEPARATEDATA % This script separates user data into 35% training,
 %10% validation and the rest for testing.
 %	user should be 'all' or an int between 1 and 57 for specific user.
@@ -6,12 +6,12 @@ function separateData(user, full)
 if strcmp('all', user)
 	numFiles = length(dir(fullfile(FileIO.PFILTERED,'*.mat')));
 	for ii = 1:numFiles
-		writeData(ii, full);
+		writeData(ii, limitFlag);
 	end
 else
-	writeData(user, full);
+	writeData(user, limitFlag);
 end
-	function writeData(user, full)
+	function writeData(user, limitFlag)
 		fprintf('Separating data for user %d..\n', user);
 		trainPtn = 0.35;
 		validPtn = 0.1;
@@ -20,11 +20,11 @@ end
 		keystrokes = FileIO.readFiltered(user);
 		kslength = length(keystrokes);
 		lastTrainingRow = int32(floor(trainPtn*kslength));
-		if lastTrainingRow > maxTrain
+		if limitFlag && lastTrainingRow > maxTrain
 			lastTrainingRow = maxTrain;
 		end
 		refSubset = keystrokes(1:lastTrainingRow, :);
-		createRefs(user, refSubset, full);
+		createRefs(user, refSubset);
 		
 		lastValidRow = lastTrainingRow + int32(floor(validPtn*kslength));
 		validSubset = keystrokes(lastTrainingRow+1:lastValidRow, :);

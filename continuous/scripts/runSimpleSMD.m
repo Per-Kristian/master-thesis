@@ -9,21 +9,33 @@ function runSimpleSMD(user, imposter, probeSets, setType, monoRefs, ...
 %	imposters, or an integer representing a single imposter user, which can
 %	also be the user themself. In such a case, the 'imposter' is really the
 %	genuine user.
-
-%% TODO: TAKE INTO ACCOUNT THAT WE NOW REMOVE OUTLIERS IN REFERENCE.
-tic
-params.rwrdThreshold = 1.85;
+%{
+params.rwrdThreshold = 1.25;
+params.tolerance = NaN;
 params.width = 0.28;
 params.maxRwrd = 1;
 params.maxPen = 1;
-params.singleOccScore = 3;
+params.singleOccScore = 1.35;
+params.missingScore = 1.75;
+params.lockout = 80;
+params.type = 'simpleSMD';
+params.note = paramnote;
+%}
+
+params.rwrdThreshold = 1.85;
+params.tolerance = NaN;
+params.width = 0.28;
+params.maxRwrd = 1;
+params.maxPen = 1;
+params.singleOccScore = 2.3;
 params.missingScore = 3.3;
 params.lockout = 90;
+params.type = 'simpleSMD';
 params.note = paramnote;
+
 
 runner = Runner(user, imposter, params, probeSets, setType, monoRefs, ...
 	diRefs, fast, resultnote, 'CA_simpleSMD');
 runner.run();
 
-toc
 end

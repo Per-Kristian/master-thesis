@@ -1,4 +1,3 @@
 %filterData;
-full = true;
-separateData('all', full);
+separateData('all', 0);
 prep;

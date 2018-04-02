@@ -108,8 +108,8 @@ classdef CombRunner < handle
 		end
 		
 		function currAvgVals = processImposters(obj,userName)
-			monoRef = obj.monoRefs.(userName);
-			diRef = obj.diRefs.(userName);
+			sets.monoRef = obj.monoRefs.(userName);
+			sets.diRef = obj.diRefs.(userName);
 			storedPAParams = FileIO.readPersonalPAParams(userName,'PA', ...
 				obj.PAParams);
 			PALockout = storedPAParams.meanScore + obj.PAParams.tolerance;
@@ -124,29 +124,29 @@ classdef CombRunner < handle
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
 					imposterName = getUserName(currImposter);
-					probeSet = obj.probeSets.(imposterName);
+					sets.probeSet = obj.probeSets.(imposterName);
 					if obj.fast
-						[avgActions, trustProgress] = obj.fastProcess(userName, ...
-							imposterName, CAUserParams, PALockout);
+						[avgActions, trustProgress] = obj.fastProcess(sets, ... 
+							userName, imposterName, CAUserParams, PALockout);
 					else
-					[avgActions, trustProgress] = obj.simulate(monoRef, diRef, ...
-						probeSet, CAUserParams, PALockout);
+					[avgActions, trustProgress] = obj.simulate(sets, ... 
+						CAUserParams, PALockout);
 					end
 					%FileIO.writeSingleResult(userName, imposterName, ...
 					%	obj.systemType, obj.paramsID, ...
 					%	obj.numUsers, trustProgress, avgActions, obj.fast);
-					currAvgVals(currImposter,:) = ...
-						[avgActions, length(probeSet)];
+					currAvgVals(currImposter,:) = [avgActions, length(sets.probeSet)];
 				end
 			else
 				imposterName = getUserName(obj.imposter);
+				sets.probeSet = obj.probeSets.(imposterName);
 				if obj.fast
 					[avgActions, trustProgress] = ...
-					obj.fastProcess(userName, imposterName);
+					obj.fastProcess(sets, userName, imposterName, CAUserParams, ...
+							PALockout);
 				else
-					probeSet = obj.probeSets.(imposterName);
 					[avgActions, trustProgress] = ...
-					obj.simulate(monoRef, diRef, probeSet);
+					obj.simulate(sets, CAuserParams, PALockout);
 				end
 				%FileIO.writeSingleResult(userName, imposterName, ...
 				%	obj.systemType, obj.paramsID, ...
@@ -161,29 +161,35 @@ classdef CombRunner < handle
 			num = size(undetected,1);
 		end
 		
-		function [avgActions, trustProgress] = fastProcess(obj, userName, ...
-				imposterName, CAUserParams, PALockout)
-			monoCol = 1;
-			diCol = 2;
+		function [avgActions, trustProgress] = fastProcess(obj, sets, ...
+				userName, imposterName, CAUserParams, PALockout)
 			
 			CAScores = FileIO.readScores(userName, imposterName, ...
 				obj.CAType, obj.setType);
-						
 			CAScoresLength = length(CAScores);
 			trustProgress = NaN(length(CAScores), 2);
 			trustModel = TrustModel(CAUserParams);
 			lastProcessed = 0;
-			while lastProcessed <= CAScoresLength-obj.PAParams.blockLength
-				blockEnd = lastProcessed + obj.PAParams.blockLength;
+			blockSets.monoRef = sets.monoRef;
+			blockSets.diRef = sets.diRef;
+			matcher = Matcher(sets.monoRef, sets.diRef);
+			%indLastFullBlock = CAScoresLength-obj.PAParams.blockLength;
+			%while lastProcessed <= indLastFullBlock
+			while lastProcessed < CAScoresLength
 				blockStart = lastProcessed + 1;
-				block = CAScores(blockStart:blockEnd, :);
-				blockTrustProg = fastBlockProcess(block, ...
-					trustModel, CAUserParams.lockout);
+				blockEnd = lastProcessed + obj.PAParams.blockLength;
+				blockSets.CAScores = CAScores(blockStart:blockEnd, :);
+				blockSets.rawProbe = sets.probeSet(blockStart:blockEnd, :);
+				
+				blockTrustProg = fastBlockProcess(blockSets, trustModel, ...
+					CAUserParams.lockout, PALockout, matcher);
 				
 				lastProcessed = lastProcessed + size(blockTrustProg, 1);
-				trustProgress(blockStart:lastProcessed,:);
+				trustProgress(blockStart:lastProcessed,:) = blockTrustProg;
 			end
+			avgActions = obj.avgActions(trustProgress, CAuserParams);
 			
+			%{
 			for ii = 1:numBlocks
 				blockEnd = ii * obj.PAParams.blockLength;
 				blockStart = blockEnd - obj.PAParams.blockLength + 1;
@@ -195,18 +201,53 @@ classdef CombRunner < handle
 					newTrust = ...
 						trustModel.influence(PAScores(ii), obj.combParams.influence);
 					if newTrust < CAUserParams.lockout
-					trustModel.trust = 100;
+						trustModel.resetTrust();
 					end
 				end
 			end
+			
 			
 			kk = numBlocks * obj.PAParams.blockLength + 1;
 			while(kk <= CAScoresLength)
 				newTrust = trustModel.alterTrust(CAScores(kk, monoCol));
 			end
 			avgActions = obj.avgActions(trustProgress, CAuserParams);
+			%}
 		end
-		%{ 
+		
+		function blockTrustProgress = fastBlockProcess(obj, sets, ...
+				trustModel, CALockout, PALockout, matcher)
+			monoCol = 1;
+			diCol = 2;
+			
+			blockLength = size(sets.CAScores,1);
+			blockTrustProgress = NaN(blockLength, 2);
+			for ii = 1:blockLength
+				newTrust = trustModel.alterTrust(sets.CAScores(ii,monoCol));
+				if ~isnan(sets.CAScores(ii,diCol))
+					newTrust = trustModel.alterTrust(sets.CAScores(ii, diCol));
+				end
+				blockTrustProgress(ii) = newTrust;
+				if newTrust < CALockout
+					trustModel.resetTrust();
+					blockTrustProgress = blockTrustProgress(1:ii,:);
+					return
+				end
+			end
+			
+			if blockLength == obj.PAParams.blockLength
+				monographs = FeatureExtractor.extractSingleActions(sets.raw);
+				digraphs = FeatureExtractor.extractPAngraphs(sets.raw, true);
+				blockScore = matcher.getBlockScore(monographs, digraphs);
+				newTrust = trustModel.influence(blockScore, ...
+					obj.PAParams.influenceType, PALockout);
+				blockTrustProgress(blockLength,2) = newTrust;
+				if newTrust < CALockout
+					trustModel.resetTrust();
+				end
+			end
+		end
+		%{
 			This function is flawed, as it does not reset blocks when locked out
 			by the CA system.
 			
@@ -238,7 +279,7 @@ classdef CombRunner < handle
 					newTrust = ...
 						trustModel.influence(PAScores(ii), obj.combParams.influence);
 					if newTrust < CAUserParams.lockout
-					trustModel.trust = 100;
+					trustModel.resetTrust();
 				end
 				
 			end
@@ -261,7 +302,7 @@ classdef CombRunner < handle
 				end
 				CAblockTrustProgress(ii) = newTrust;
 				if newTrust < lock
-					trustModel.trust = 100;
+					trustModel.resetTrust();
 				end
 			end
 		end
@@ -302,7 +343,7 @@ classdef CombRunner < handle
 					trustProgress(jj,1) = newTrust;
 					% Reset trust level to 100 if it has dropped below lockout.
 					if newTrust < obj.params.lockout
-						trustModel.trust = 100;
+						trustModel.resetTrust();
 					end
 					prevRow = currRow;
 				end
@@ -338,7 +379,7 @@ classdef CombRunner < handle
 				if endLength <= avgWithoutEnd
 					avg = mean(diff([0; indices]));
 				else
-					avg = mean(diff([0; indices; length(trustProgress)]));
+					avg = mean(diff([0; indices; size(trustProgress, 1)]));
 				end
 			end
 		end

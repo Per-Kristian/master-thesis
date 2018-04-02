@@ -2,7 +2,7 @@ function calcAllPAScores(monoRefs, diRefs, probeSets)
 %CALCALLPASCORES Summary of this function goes here
 %   Detailed explanation goes here
 numUsers = numel(fieldnames(probeSets));
-params.blockLength = 250;
+params.blockLength = 500;
 params.absThresh = 1.25;
 
 runner = PARunner('all', 'all', params, probeSets, 'test', monoRefs, ...
