@@ -1,7 +1,7 @@
 function runPASystem(user, imposter, probeSets, setType, monoRefs, ...
 	diRefs, fast, paramnote, resultnote)
 
-params.blockLength = 250;
+params.blockLength = 500;
 params.absThresh = 1.25;
 params.tolerance = 0.001;
 params.note = paramnote;

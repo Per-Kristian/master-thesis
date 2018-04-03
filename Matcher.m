@@ -52,6 +52,36 @@ classdef Matcher < handle
 			end
 		end
 		
+		
+		function score = getSimpleMonoScore(obj, probe)
+			index = find(strcmp(obj.monoRef(:,1), probe{1}));
+			%If there are no occurrences in reference, return -2
+			if isempty(index)
+				score = -2;
+			else
+				refRow = obj.monoRef(index, :);
+				% If there is only one occurrence in the reference, there
+				% exists no standard deviation, and distance can't be
+				% calculated. Return -1 to indicate this.
+				if length(refRow{2}) == 1
+					score = -1;
+				else
+					refMean = refRow{3};
+					refStd = refRow{4};
+					diff = abs(probe{2}-refMean);
+					if diff == 0
+						diff = 0.0001;
+					end
+					if refStd == 0
+						refStd = 0.1;
+					end
+					score = diff/refStd;
+				end
+			end
+		end
+		
+		%{
+		%OUTLIERS INCLUDED
 		function score = getSimpleMonoScore(obj, probe)
 			index = find(strcmp(obj.monoRef(:,1), probe{1}));
 			%If there are no occurrences in reference, return -2
@@ -78,6 +108,7 @@ classdef Matcher < handle
 				end
 			end
 		end
+		%}
 		
 		%{
 		function score = getSimpleDiScore(obj, probe)
@@ -112,6 +143,44 @@ classdef Matcher < handle
 		end
 		%}
 		
+		% OUTLIERS REMOVED:
+		function score = getSimpleDiScore(obj, probe)
+			index = find(strcmp(obj.diRef(:,1), probe{1}));
+			
+			if isempty(index)
+				score = -2;
+			else
+				refRow = obj.diRef(index, :);
+				
+				latMeans = cell2mat(refRow(3:6));
+				latStds = cell2mat(refRow(7:10));
+				dists = NaN(1,4);
+				
+				for ii = 1:4
+					if length(refRow{ii+10}) > 1
+						diff = abs(probe{ii+2}-latMeans(ii));
+						% Handle edge cases where the feature matches the exact
+						% expected value. Also, handle cases where stdv is 0.
+						if diff == 0
+							diff = 0.0001;
+						end
+						if latStds(ii) == 0
+							latStds(ii) = 0.1;
+						end
+						dists(ii) = diff/latStds(ii);
+					end
+				end
+				score = nanmean(dists);
+				if isnan(score)
+					% Indicate that only one occurrence of every lat is found in ref
+					score = -1;
+				end
+			end
+		end
+		
+		
+		%{
+		%OUTLIERS INCLUDED
 		function score = getSimpleDiScore(obj, probe)
 			index = find(strcmp(obj.diRef(:,1), probe{1}));
 			
@@ -145,6 +214,8 @@ classdef Matcher < handle
 				end
 			end
 		end
+		%}
+		
 		
 		function score = getBlockScore(obj, monographs, digraphs)
 			sharedMonos = obj.getSharedMonos(monographs);

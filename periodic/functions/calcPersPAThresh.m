@@ -1,5 +1,5 @@
 numUsers = numel(fieldnames(monoRefs));
-params.blockLength = 250;
+params.blockLength = 500;
 params.absThresh = 1.25;
 
 PArunner = PARunner('all', 'all', params, validSets, 'valid', monoRefs, ...
