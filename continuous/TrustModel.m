@@ -10,6 +10,7 @@ classdef TrustModel < handle
 		D
 		missingScore
 		singleOccScore
+		range
 	end
 	
 	methods
@@ -29,6 +30,7 @@ classdef TrustModel < handle
 			obj.D = params.maxPen;
 			obj.singleOccScore = params.singleOccScore;
 			obj.missingScore = params.missingScore;
+			obj.range = 100-params.lockout;
 		end
 		
 		function newTrust = alterTrust(obj, score)
@@ -56,9 +58,9 @@ classdef TrustModel < handle
 			if strcmp(inflParams.type, 'decisionLevel')
 				%distToThresh = score-thresh;
 				if score > PALockout
-					delta = inflParams.up;
+					delta = -inflParams.downMult * obj.range;
 				else
-					delta = inflParams.down;
+					delta = inflParams.upMult * obj.range;
 				end
 				obj.trust = min(max(obj.trust + delta, 0), 100);
 				newTrust = obj.trust;

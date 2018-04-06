@@ -61,7 +61,7 @@ classdef Runner < handle
 				userName = getUserName(currUser);
 				fprintf('Processing %s..\n', userName);
 				currAvgVals = obj.processImposters(userName);
-				[anga, p1] = obj.getANGA(currAvgVals(currUser,:));
+				[anga, p1] = getANGA(currAvgVals(currUser,:));
 				allGenVals(currUser) = anga;
 				%Remove ANGA from array.
 				currImpVals = currAvgVals;
@@ -138,18 +138,6 @@ classdef Runner < handle
 				%	obj.numUsers, trustProgress, avgActions, obj.fast);
 				currAvgVals = [obj.imposter, avgActions, ...
 					length(obj.probeSets.(imposterName))];
-			end
-		end
-		
-		function [anga, notLocked] = getANGA(obj, row) %#ok<INUSL>
-			%GETANGA Return current user's ANGA. If they were never locked
-			%out, notLocked is true.
-			if row(1) == -1
-				anga = row(2);
-				notLocked = true;
-			else
-				anga = row(1);
-				notLocked = false;
 			end
 		end
 		

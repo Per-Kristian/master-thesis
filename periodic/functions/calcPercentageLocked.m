@@ -1,8 +1,11 @@
 function percentage = calcPercentageLocked(resultArr)
+percentage = NaN;
 if ~isempty(resultArr)
-	percentage = sum(resultArr(:,1))/sum(resultArr(:,2))*100;
-else
-	percentage = NaN;
+	numLocked = sum(resultArr(:,1));
+	numEngaged = sum(resultArr(:,2));
+	if numEngaged > 0
+		percentage = numLocked/numEngaged*100;
+	end
 end
 end
 
