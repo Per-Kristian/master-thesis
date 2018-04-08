@@ -406,17 +406,16 @@ classdef CombRunner < handle
 			probeSet = obj.probeSets.(imposterName);
 		end
 		
-		function [avg, PALocked, PAEngaged] =  avgActions(obj, ...
+		function [avg, PAImpSuspected, PAEngaged] =  avgActions(obj, ...
 				trustProgress, CAparams) %#ok<INUSL>
 			% AVGACTIONS Calculates the average number of actions before
 			% being locked out. Also counts how many times the PA system locked
 			% the user out, as well as how many times the PA system was engaged.
 			%	avg is -1 if they are never locked out.
 			[rows, cols] = find(trustProgress < CAparams.lockout);
-			
+			PAImpSuspected = 0;
 			if isempty(rows)
 				avg = -1;
-				PALocked = 0;
 			else
 				% Only include the keystrokes after the last lockout if it
 				% will pull the average number of actions UP.
@@ -429,7 +428,9 @@ classdef CombRunner < handle
 				end
 				%counts.CALocked = numel(cols(cols == 1));
 				%counts.PALocked = numel(cols) - counts.CA;
-				PALocked = numel(cols(cols == 2));
+				%PAImpSuspected = numel(cols(cols == 2));
+				PAImpSuspected = ...
+					numel(trustProgress(trustProgress(:,1) > trustProgress(:,2)));
 			end
 			PAEngaged = numel(trustProgress(~isnan(trustProgress(:,2))));
 		end
