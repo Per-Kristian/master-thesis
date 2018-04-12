@@ -44,14 +44,14 @@ classdef CombRunner < handle
 		
 		function run(obj)
 			if strcmp(obj.user, 'all')
-				%CAdb = DBAccess(obj.CAType);
-				%obj.paramsIDs.CA = CAdb.insertParams(obj.params.CA);
-				%PAdb = DBAccess('PA');
-				%obj.paramsIDs.PA = PAdb.insertParams(obj.params.PA);
+				CAdb = DBAccess(obj.CAType);
+				obj.paramsIDs.CA = CAdb.insertParams(obj.params.CA);
+				PAdb = DBAccess('PA');
+				obj.paramsIDs.PA = PAdb.insertParams(obj.params.PA);
 				
-				%obj.paramsIDs.infl = obj.db.insertParams(obj.params.infl);
+				obj.paramsIDs.infl = obj.db.insertParams(obj.params.infl);
 				results = obj.allUsers();
-				%obj.db.insertResults(results, obj.paramsIDs, obj.resultNote);
+				obj.db.insertCombResults(results, obj.paramsIDs, obj.resultNote);
 			else
 				obj.singleUser();
 			end
@@ -138,14 +138,23 @@ classdef CombRunner < handle
 		function [currAvgVals, currCounts] = processImposters(obj,userName)
 			sets.monoRef = obj.monoRefs.(userName);
 			sets.diRef = obj.diRefs.(userName);
+			userParams = obj.params;
 			storedPAParams = FileIO.readPersonalPAParams(userName,'PA', ...
 				obj.params.PA);
-			PALockout = storedPAParams.meanScore + obj.params.PA.tolerance;
-			CAUserParams = obj.params.CA;
+			userParams.PA.meanScore = storedPAParams.meanScore;
 			
-			if isnan(CAUserParams.lockout)
+			if strcmp(obj.params.infl.type,'decisionLevel')
+				userParams.infl.type = 1;
+				userParams.PA.lockout = storedPAParams.meanScore + ...
+					obj.params.PA.tolerance;
+			elseif strcmp(obj.params.infl.type, 'scoreLevel')
+				userParams.infl.type = 2;
+			end
+			
+			%CAUserParams = obj.params.CA;
+			if isnan(userParams.CA.lockout)
 				storedCAParams = FileIO.readPersonalParams(userName,obj.CAType);
-				CAUserParams.lockout = storedCAParams.threshold;
+				userParams.CA.lockout = storedCAParams.threshold;
 			end
 			
 			if strcmp(obj.imposter, 'all')
@@ -156,10 +165,10 @@ classdef CombRunner < handle
 					sets.probeSet = obj.probeSets.(imposterName);
 					if obj.fast
 						[avgActions, trustProgress, counts] = obj.fastProcess(sets, ... 
-							userName, imposterName, CAUserParams, PALockout);
+							userName, imposterName, userParams);
 					else
 					[avgActions, trustProgress, counts] = obj.simulate(sets, ... 
-						CAUserParams, PALockout);
+						userParams);
 					end
 					%FileIO.writeSingleResult(userName, imposterName, ...
 					%	obj.systemType, obj.paramsID, ...
@@ -172,11 +181,10 @@ classdef CombRunner < handle
 				sets.probeSet = obj.probeSets.(imposterName);
 				if obj.fast
 					[avgActions, trustProgress, counts] = ...
-					obj.fastProcess(sets, userName, imposterName, CAUserParams, ...
-							PALockout);
+					obj.fastProcess(sets, userName, imposterName, userParams);
 				else
 					[avgActions, trustProgress, counts] = ...
-					obj.simulate(sets, CAUserParams, PALockout);
+					obj.simulate(sets, userParams);
 				end
 				%FileIO.writeSingleResult(userName, imposterName, ...
 				%	obj.systemType, obj.paramsID, ...
@@ -193,13 +201,13 @@ classdef CombRunner < handle
 		end
 		
 		function [avgActions, trustProgress, counts] = fastProcess(obj, ...
-				sets, userName, imposterName, CAUserParams, PALockout)
+				sets, userName, imposterName, userParams, PALockout)
 			
 			CAScores = FileIO.readScores(userName, imposterName, ...
 				obj.CAType, obj.setType);
 			CAScoresLength = length(CAScores);
 			trustProgress = NaN(length(CAScores), 2);
-			trustModel = TrustModel(CAUserParams);
+			trustModel = TrustModel(userParams);
 			lastProcessed = 0;
 			blockSets.monoRef = sets.monoRef;
 			blockSets.diRef = sets.diRef;

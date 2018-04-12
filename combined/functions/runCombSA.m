@@ -11,16 +11,19 @@ params.CA.singleOccScore = 2.45;
 params.CA.missingScore = 2.75;
 params.CA.lockout = 50;
 params.CA.type = 'simpleSMD';
-params.CA.note = paramNote;
+params.CA.note = '';
 
 params.PA.blockLength = 500;
 params.PA.absThresh = 1.25;
 params.PA.tolerance = 0.33;
-params.PA.note = paramNote;
+params.PA.note = 'Half weights for digraphs';
 
-params.infl.type = 'decisionLevel';
-params.infl.upMult = 0.3;
-params.infl.downMult = 0.3;
+params.infl.type = 'scoreLevel';
+params.infl.upMult = NaN;
+params.infl.downMult = NaN;
+params.infl.rwrdThreshold = NaN;
+params.infl.maxPen = NaN;
+params.infl.note = paramNote;
 
 runner = CombRunner(user, imposter, params, probeSets, setType, ...
 	monoRefs, diRefs, fast, resultNote, 'comb_SA');

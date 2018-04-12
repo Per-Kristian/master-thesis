@@ -3,7 +3,7 @@ function runPASystem(user, imposter, probeSets, setType, monoRefs, ...
 
 params.blockLength = 500;
 params.absThresh = 1.25;
-params.tolerance = 0.001;
+params.tolerance = 0.5;
 params.note = paramnote;
 
 PArunner = PARunner(user, imposter, params, probeSets, setType, monoRefs, ...

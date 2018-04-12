@@ -49,8 +49,58 @@ classdef DBAccess
 					' ','AND note="%s";'], ...
 					params.blockLength, params.absThresh, params.tolerance, ...
 					params.note);
+			elseif strcmp(obj.systemType, 'comb_SA')
+				colnames = {'type', 'upMult', 'downMult', 'note'};
+				query = obj.buildCombQuery(params);
 			else
-				if isnan(params.lockout)
+				colnames = {'rwrdThreshold','tolerance','width','maxRwrd', 'maxPen', ...
+					'singleOccScore', 'missingScore', 'lockout', 'type', 'note'};
+				query = obj.buildCAQuery(params);
+			end
+			curs = exec(conn, query);
+			curs = fetch(curs);
+		end
+		
+		function query = buildCombQuery(obj, params) %#ok<INUSL>
+			if isnan(params.upMult)
+				upMultString = 'IS NULL';
+			else
+				upMultString = sprintf('= %d',params.upMult);
+			end
+			
+			if isnan(params.downMult)
+				downMultString = 'IS NULL';
+			else
+				downMultString = sprintf('= %d',params.downMult);
+			end
+			
+			if isnan(params.rwrdThreshold)
+				rwrdThreshString = 'IS NULL';
+			else
+				rwrdThreshString = sprintf('= %d',params.rwrdThreshold);
+			end
+			
+			if isnan(params.width)
+				widthString = 'IS NULL';
+			else
+				widthString = sprintf('= %d',params.width);
+			end
+			
+			if isnan(params.maxPen)
+				maxPenString = 'IS NULL';
+			else
+				maxPenString = sprintf('= %d',params.maxPen);
+			end
+			
+			query = sprintf(['SELECT id FROM params WHERE', ' ', ...
+					'type = "%s" AND upMult %s AND downMult %s', ' ', ...
+					'AND rwrdThreshold %s AND width %s AND maxPen %s AND note = "%s";'], ...
+					params.type, upMultString, downMultString, rwrdThreshString, ...
+					widthString, maxPenString, params.note);
+		end
+		
+		function query = buildCAQuery(obj, params) %#ok<INUSL>
+			if isnan(params.lockout)
 					lockoutString = 'IS NULL';
 				else
 					lockoutString = sprintf('= %d',params.lockout);
@@ -60,25 +110,27 @@ classdef DBAccess
 				else
 					rwrdString = sprintf('= %d',params.rwrdThreshold);
 				end
+				
+				if isnan(params.maxRwrd)
+					maxRwrdString = 'IS NULL';
+				else
+					rwrdString = sprintf('= %d',params.maxRwrd);
+				end
+				
 				if isnan(params.tolerance)
 					toleranceString = 'IS NULL';
 				else
 					toleranceString = sprintf('= %d',params.tolerance);
 				end
 				
-				colnames = {'rwrdThreshold','tolerance','width','maxRwrd', 'maxPen', ...
-					'singleOccScore', 'missingScore', 'lockout', 'type', 'note'};
 				query = sprintf(['SELECT id FROM params WHERE', ' ', ...
-					'rwrdThreshold %s AND tolerance %s AND width = %d AND maxRwrd = %d', ...
+					'rwrdThreshold %s AND tolerance %s AND width = %d AND maxRwrd %s', ...
 					' ', 'AND maxPen = %d AND singleOccScore = %d AND', ...
 					' ','missingScore = %d AND lockout %s AND type = "%s"', ...
 					' ','AND note="%s";'], ...
-					rwrdString, toleranceString, params.width, params.maxRwrd, ...
+					rwrdString, toleranceString, params.width, maxRwrdString, ...
 					params.maxPen, params.singleOccScore, ...
 					params.missingScore, lockoutString, params.type, params.note);
-			end
-			curs = exec(conn, query);
-			curs = fetch(curs);
 		end
 		
 		function insertResults(obj, results, paramsID, resultNote)
@@ -108,6 +160,27 @@ classdef DBAccess
 			for ii = 1:length(subResTables)
 				insert(conn, subResTables{ii}, ...
 					colNames, results(ii,:));
+			end
+			close(conn);
+		end
+		
+		function insertCombResults(obj, results, paramsIDs, resultNote)
+			conn = database(obj.conf.datasource, obj.conf.username, ...
+				obj.conf.password, obj.conf.driver, obj.conf.url);
+			subResTables = {'pp', 'pm', 'mp', 'mm'};
+			
+			colNames = {'params', 'CA_params', 'PA_params', 'numUsers', ...
+				'ANGA', 'ANIA', 'FNMR', 'FMR', 'impND', 'note'};
+			resultSummary = cell(1,10);
+			resultSummary(1:3) = {paramsIDs.infl, paramsID.CA, paramsID.PA};
+			resultSummary(4:9) = num2cell(results(5,:),1);
+			resultSummary{10} = resultNote;
+			insert(conn, 'results', colNames, resultSummary);
+			% Insert subresults:
+			subResColNames = colNames(4:9);
+			for ii = 1:length(subResTables)
+				insert(conn, subResTables{ii}, ...
+					subResColNames, results(ii,:));
 			end
 			close(conn);
 		end

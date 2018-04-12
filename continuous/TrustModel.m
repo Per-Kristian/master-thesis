@@ -4,6 +4,7 @@ classdef TrustModel < handle
 	
 	properties
 		trust % current trust level
+		userParams
 		A
 		B
 		C
@@ -14,7 +15,7 @@ classdef TrustModel < handle
 	end
 	
 	methods
-		function obj = TrustModel(params)
+		function obj = TrustModel(userParams)
 			%TRUSTMODEL Construct an instance of this class
 			%	Params: 
 			%	threshold = reward/penalty threshold, B = width,
@@ -22,15 +23,15 @@ classdef TrustModel < handle
 			%	dissimilarity score for probe not present in reference, 
 			%	singleOccScore = fixed dissimilarity score for only one 
 			%	occurrence of probe in reference.
-			
 			obj.trust = 100;
-			obj.A = params.rwrdThreshold;
-			obj.B = params.width;
-			obj.C = params.maxRwrd;
-			obj.D = params.maxPen;
-			obj.singleOccScore = params.singleOccScore;
-			obj.missingScore = params.missingScore;
-			obj.range = 100-params.lockout;
+			obj.userParams = userParams;
+			obj.A = userParams.CA.rwrdThreshold;
+			obj.B = userParams.CA.width;
+			obj.C = userParams.CA.maxRwrd;
+			obj.D = userParams.CA.maxPen;
+			obj.singleOccScore = userParams.CA.singleOccScore;
+			obj.missingScore = userParams.CA.missingScore;
+			obj.range = 100-userParams.CA.lockout;
 		end
 		
 		function newTrust = alterTrust(obj, score)
@@ -44,28 +45,54 @@ classdef TrustModel < handle
 			elseif score == -2
 				score = obj.missingScore;
 			end
+			%{
 			numerator = obj.D .* (1 + 1 ./ obj.C);
 			denominator = (1 ./ obj.C)+exp((score-obj.A) ./ obj.B);
 			frac = numerator./denominator;
 			delta = min(-obj.D + frac, obj.C);
+			%}
+			% delta = obj.scoreFromSigmoid(obj.A, obj.B, obj.C, obj.D, score);
+			delta = obj.scoreFromSigmoid(obj.A, obj.B, obj.D, score);
 			obj.trust = min(max(obj.trust + delta, 0), 100);
 			newTrust = obj.trust;
 		end
 		
-		function newTrust = influence(obj, score, inflParams, PALockout)
+		function newTrust = influence(obj, score)
 			% Takes a score from a periodic authentication, and uses it to
 			% influence the current trust level.
-			if strcmp(inflParams.type, 'decisionLevel')
+			inflParams = obj.userParams.infl;
+			if inflParams.type == 1
 				%distToThresh = score-thresh;
-				if score > PALockout
+				if score > obj.userParams.PA.lockout
 					delta = -inflParams.downMult * obj.range;
 				else
 					delta = inflParams.upMult * obj.range;
 				end
 				obj.trust = min(max(obj.trust + delta, 0), 100);
 				newTrust = obj.trust;
+			elseif type == 2
+				delta = obj.scoreFromSigmoid();
 			end
 		end
+		
+		function delta = deltaFromSigmoid(obj, rwrdThresh, width, ...
+				maxPen, score) %#ok<INUSL>
+			numerator = maxPen .* 2;
+			denominator = 1 + exp((score-rwrdThresh) ./ width);
+			frac = numerator./denominator;
+			delta = -maxPen + frac;
+		end
+		
+		%{
+		OLD FUNCTION WITH MAXRWRD
+		function delta = scoreFromSigmoid(obj, rwrdThresh, width, maxRwrd, ...
+				maxPen, score) %#ok<INUSL>
+			numerator = maxPen .* (1 + 1 ./ maxRwrd);
+			denominator = (1 ./ maxRwrd) + exp((score-rwrdThresh) ./ width);
+			frac = numerator./denominator;
+			delta = min(-maxPen + frac, maxRwrd);
+		end
+		%}
 		
 		function resetTrust(obj)
 			obj.trust = 100;
