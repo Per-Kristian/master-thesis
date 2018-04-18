@@ -114,7 +114,7 @@ classdef DBAccess
 				if isnan(params.maxRwrd)
 					maxRwrdString = 'IS NULL';
 				else
-					rwrdString = sprintf('= %d',params.maxRwrd);
+					maxRwrdString = sprintf('= %d',params.maxRwrd);
 				end
 				
 				if isnan(params.tolerance)

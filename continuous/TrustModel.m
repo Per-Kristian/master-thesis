@@ -25,13 +25,19 @@ classdef TrustModel < handle
 			%	occurrence of probe in reference.
 			obj.trust = 100;
 			obj.userParams = userParams;
-			obj.A = userParams.CA.rwrdThreshold;
-			obj.B = userParams.CA.width;
-			obj.C = userParams.CA.maxRwrd;
-			obj.D = userParams.CA.maxPen;
-			obj.singleOccScore = userParams.CA.singleOccScore;
-			obj.missingScore = userParams.CA.missingScore;
-			obj.range = 100-userParams.CA.lockout;
+			if isfield(userParams, 'CA')
+				CAParams = userParams.CA;
+			else
+				CAParams = userParams;
+			end
+			
+			obj.A = CAParams.rwrdThreshold;
+			obj.B = CAParams.width;
+			obj.C = CAParams.maxRwrd;
+			obj.D = CAParams.maxPen;
+			obj.singleOccScore = CAParams.singleOccScore;
+			obj.missingScore = CAParams.missingScore;
+			obj.range = 100-CAParams.lockout;
 		end
 		
 		function newTrust = alterTrust(obj, score)
@@ -52,7 +58,7 @@ classdef TrustModel < handle
 			delta = min(-obj.D + frac, obj.C);
 			%}
 			% delta = obj.scoreFromSigmoid(obj.A, obj.B, obj.C, obj.D, score);
-			delta = obj.scoreFromSigmoid(obj.A, obj.B, obj.D, score);
+			delta = obj.deltaFromSigmoid(obj.A, obj.B, obj.D, score);
 			obj.trust = min(max(obj.trust + delta, 0), 100);
 			newTrust = obj.trust;
 		end
@@ -61,6 +67,7 @@ classdef TrustModel < handle
 			% Takes a score from a periodic authentication, and uses it to
 			% influence the current trust level.
 			inflParams = obj.userParams.infl;
+			PAParams = obj.userParams.PA;
 			if inflParams.type == 1
 				%distToThresh = score-thresh;
 				if score > obj.userParams.PA.lockout
@@ -71,7 +78,10 @@ classdef TrustModel < handle
 				obj.trust = min(max(obj.trust + delta, 0), 100);
 				newTrust = obj.trust;
 			elseif type == 2
-				delta = obj.scoreFromSigmoid();
+				if isnan(inflParams.rwrdThreshold)
+					%if rwrdThresh = PAParams.lockout
+				end
+				delta = obj.deltaFromSigmoid();
 			end
 		end
 		

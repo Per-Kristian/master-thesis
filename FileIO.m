@@ -160,7 +160,7 @@ classdef FileIO
 			if exist(fromFile, 'file') == 2
 				scores = importdata(fromFile);
 			else
-				fprintf('Error, file not found: %s', fromFile);
+				fprintf('Error, file not found: %s\n', fromFile);
 				scores = NaN;
 			end
 		end
@@ -174,7 +174,7 @@ classdef FileIO
 			if exist(fromFile, 'file') == 2
 				scores = importdata(fromFile);
 			else
-				fprintf('Error, file not found: %s', fromFile);
+				fprintf('Error, file not found: %s\n', fromFile);
 				scores = NaN;
 			end
 		end
@@ -213,8 +213,8 @@ classdef FileIO
 			if exist(fromFile, 'file') == 2
 				params = importdata(fromFile);
 			else
-				fprintf('Error, file not found: %s', fromFile);
-				params = NaN;
+				fprintf('Error, file not found: %s\n', fromFile);
+				params = struct([]);
 			end
 		end
 		
@@ -226,7 +226,7 @@ classdef FileIO
 			if exist(fromFile, 'file') == 2
 				params = importdata(fromFile);
 			else
-				fprintf('Error, file not found: %s', fromFile);
+				fprintf('Error, file not found: %s\n', fromFile);
 				params = NaN;
 			end
 		end

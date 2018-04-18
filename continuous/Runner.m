@@ -105,6 +105,21 @@ classdef Runner < handle
 		function currAvgVals = processImposters(obj,userName)
 			monoRef = obj.monoRefs.(userName);
 			diRef = obj.diRefs.(userName);
+			
+			userParams = obj.params;
+			persLockOutFlag = isnan(userParams.lockout);
+			persRwrdThreshFlag = isnan(userParams.rwrdThreshold);
+			if persLockOutFlag || persRwrdThreshFlag
+				storedParams = FileIO.readPersonalParams(userName, obj.systemType);
+				if persLockOutFlag
+					userParams.lockout = storedParams.threshold;
+				end
+				if persRwrdThreshFlag
+					userParams.rwrdThreshold = ...
+						storedParams.meanScore + userParams.tolerance;
+				end
+			end
+			
 			if strcmp(obj.imposter, 'all')
 				currAvgVals = zeros(obj.numUsers,2);
 				for currImposter = 1:obj.numUsers
@@ -112,14 +127,14 @@ classdef Runner < handle
 					probeSet = obj.probeSets.(imposterName);
 					if obj.fast
 						[avgActions, trustProgress] = ... 
-							obj.fastProcess(userName, imposterName);
+							obj.fastProcess(userName, imposterName, userParams);
 					else
 					[avgActions, trustProgress] = ...
-						obj.simulate(monoRef, diRef, probeSet);
+						obj.simulate(monoRef, diRef, probeSet, userParams);
 					end
-					FileIO.writeSingleResult(userName, imposterName, ...
-						obj.systemType, obj.paramsID, ...
-						obj.numUsers, trustProgress, avgActions, obj.fast);
+					%FileIO.writeSingleResult(userName, imposterName, ...
+					%	obj.systemType, obj.paramsID, ...
+					%	obj.numUsers, trustProgress, avgActions, obj.fast);
 					currAvgVals(currImposter,:) = ...
 						[avgActions, length(probeSet)];
 				end
@@ -127,11 +142,11 @@ classdef Runner < handle
 				imposterName = getUserName(obj.imposter);
 				if obj.fast
 					[avgActions, trustProgress] = ...
-					obj.fastProcess(userName, imposterName);
+					obj.fastProcess(userName, imposterName, userParams);
 				else
 					probeSet = obj.probeSets.(imposterName);
 					[avgActions, trustProgress] = ...
-					obj.simulate(monoRef, diRef, probeSet);
+					obj.simulate(monoRef, diRef, probeSet, userParams);
 				end
 				%FileIO.writeSingleResult(userName, imposterName, ...
 				%	obj.systemType, obj.paramsID, ...
@@ -156,25 +171,11 @@ classdef Runner < handle
 		end
 		
 		function [avgActions, trustProgress] = fastProcess(obj, userName, ...
-				imposterName)
+				imposterName, userParams)
 			%FASTPROCESS Uses pre-calculated scores to process an imposter
 			%against a user
 			monoCol = 1;
 			diCol = 2;
-			userParams = obj.params;
-			
-			persLockOutFlag = isnan(userParams.lockout);
-			persRwrdThreshFlag = isnan(userParams.rwrdThreshold);
-			if persLockOutFlag || persRwrdThreshFlag
-				storedParams = FileIO.readPersonalParams(userName, obj.systemType);
-				if persLockOutFlag
-					userParams.lockout = storedParams.threshold;
-				end
-				if persRwrdThreshFlag
-					userParams.rwrdThreshold = ...
-						storedParams.meanScore + userParams.tolerance;
-				end
-			end
 			
 			scores = FileIO.readScores(userName, imposterName, ...
 				obj.systemType, obj.setType);
@@ -195,12 +196,12 @@ classdef Runner < handle
 		end
 		
 		function [avgActions,trustProgress] = simulate(obj, ...
-				monoRef, diRef, probeSet)
+				monoRef, diRef, probeSet, userParams)
 			% Simulates genuine behavior or an attack depending on whether
 			% or not the imposter parameter is the user itself.
 			matcher = Matcher(monoRef, diRef);
 			testLength = length(probeSet);
-			trustModel = TrustModel(obj.params);
+			trustModel = TrustModel(userParams);
 			trustProgress = zeros(testLength, 1);
 			prevRow = {[], [], [], []};
 			
@@ -222,7 +223,7 @@ classdef Runner < handle
 				end
 				prevRow = currRow;
 			end
-			avgActions = obj.avgActions(trustProgress, obj.params);
+			avgActions = obj.avgActions(trustProgress, userParams);
 		end
 			
 		function [monoRef, diRef, probeSet] = fetchSets(obj, user, imposter)
