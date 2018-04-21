@@ -50,7 +50,8 @@ classdef DBAccess
 					params.blockLength, params.absThresh, params.tolerance, ...
 					params.note);
 			elseif strcmp(obj.systemType, 'comb_SA')
-				colnames = {'type', 'upMult', 'downMult', 'note'};
+				colnames = {'type', 'upMult', 'downMult', 'rwrdThreshold', ...
+					'width', 'maxPen', 'note'};
 				query = obj.buildCombQuery(params);
 			else
 				colnames = {'rwrdThreshold','tolerance','width','maxRwrd', 'maxPen', ...
@@ -172,7 +173,7 @@ classdef DBAccess
 			colNames = {'params', 'CA_params', 'PA_params', 'numUsers', ...
 				'ANGA', 'ANIA', 'FNMR', 'FMR', 'impND', 'note'};
 			resultSummary = cell(1,10);
-			resultSummary(1:3) = {paramsIDs.infl, paramsID.CA, paramsID.PA};
+			resultSummary(1:3) = {paramsIDs.infl, paramsIDs.CA, paramsIDs.PA};
 			resultSummary(4:9) = num2cell(results(5,:),1);
 			resultSummary{10} = resultNote;
 			insert(conn, 'results', colNames, resultSummary);

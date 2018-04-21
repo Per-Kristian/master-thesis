@@ -10,14 +10,19 @@ function runSimpleSMD(user, imposter, probeSets, setType, monoRefs, ...
 %	also be the user themself. In such a case, the 'imposter' is really the
 %	genuine user.
 
-%params.rwrdThreshold = 1.3;
-params.rwrdThreshold = NaN;
-params.tolerance = 0.6;
+
+%params.rwrdThreshold = NaN;
+%params.tolerance = 0.6;
+%params.singleOccScore = 5;
+%params.missingScore = 5;
+params.rwrdThreshold = 1.3;
+params.tolerance = NaN;
 params.width = 0.28;
 params.maxRwrd = 1;
 params.maxPen = 1;
-params.singleOccScore = 5;
-params.missingScore = 5;
+
+params.singleOccScore = 2.45;
+params.missingScore = 2.75;
 params.lockout = 50;
 params.type = 'simpleSMD';
 params.note = paramnote;

@@ -152,9 +152,16 @@ classdef CombRunner < handle
 			end
 			
 			%CAUserParams = obj.params.CA;
-			if isnan(userParams.CA.lockout)
+			persLockOutFlag = isnan(userParams.CA.lockout);
+			persRwrdThreshFlag = isnan(userParams.CA.rwrdThreshold);
+			if persLockOutFlag || persRwrdThreshFlag
 				storedCAParams = FileIO.readPersonalParams(userName,obj.CAType);
-				userParams.CA.lockout = storedCAParams.threshold;
+				if persLockOutFlag
+					userParams.CA.lockout = storedCAParams.threshold;
+				else
+					userParams.CA.rwrdThreshold = ...
+						storedCAParams.meanScore + userParams.CA.tolerance;
+				end
 			end
 			
 			if strcmp(obj.imposter, 'all')
@@ -201,7 +208,7 @@ classdef CombRunner < handle
 		end
 		
 		function [avgActions, trustProgress, counts] = fastProcess(obj, ...
-				sets, userName, imposterName, userParams, PALockout)
+				sets, userName, imposterName, userParams)
 			
 			CAScores = FileIO.readScores(userName, imposterName, ...
 				obj.CAType, obj.setType);
@@ -222,13 +229,13 @@ classdef CombRunner < handle
 				blockSets.rawProbe = sets.probeSet(blockStart:blockEnd, :);
 				
 				blockTrustProg = obj.fastBlockProcess(blockSets, trustModel, ...
-					CAUserParams.lockout, PALockout, matcher);
+					userParams.CA.lockout, userParams.PA.lockout, matcher);
 				
 				lastProcessed = lastProcessed + size(blockTrustProg, 1);
 				trustProgress(blockStart:lastProcessed,:) = blockTrustProg;
 			end
 			[avgActions, PALocked, PAEngaged] = ...
-				obj.avgActions(trustProgress, CAUserParams);
+				obj.avgActions(trustProgress, userParams.CA);
 			counts.PALocked = PALocked;
 			counts.PAEngaged = PAEngaged;
 			
@@ -288,8 +295,7 @@ classdef CombRunner < handle
 				monographs = FeatureExtractor.extractSingleActions(sets.rawProbe);
 				digraphs = FeatureExtractor.extractPAngraphs(sets.rawProbe);
 				blockScore = matcher.getBlockScore(monographs, digraphs);
-				newTrust = trustModel.influence(blockScore, ...
-					obj.params.infl, PALockout);
+				newTrust = trustModel.influence(blockScore);
 				blockTrustProgress(end,2) = newTrust;
 				if newTrust < CALockout
 					trustModel.resetTrust();

@@ -4,11 +4,15 @@ function runCombSA(user, imposter, probeSets, setType, monoRefs, ...
 %   Detailed explanation goes here
 params.CA.rwrdThreshold = 1.3;
 params.CA.tolerance = NaN;
+%params.CA.rwrdThreshold = NaN;
+%params.CA.tolerance = 0.5;
 params.CA.width = 0.28;
 params.CA.maxRwrd = 1;
 params.CA.maxPen = 1;
 params.CA.singleOccScore = 2.45;
 params.CA.missingScore = 2.75;
+%params.CA.singleOccScore = 5;
+%params.CA.missingScore = 5;
 params.CA.lockout = 50;
 params.CA.type = 'simpleSMD';
 params.CA.note = '';
@@ -18,11 +22,21 @@ params.PA.absThresh = 1.25;
 params.PA.tolerance = 0.33;
 params.PA.note = 'Half weights for digraphs';
 
+%params.infl.type = 'decisionLevel';
+%params.infl.upMult = 1.001;
+%params.infl.downMult = 1.001;
+%params.infl.rwrdThreshold = NaN;
+%params.infl.tolerance = NaN;
+%params.infl.width = NaN;
+%params.infl.maxPen = NaN;
 params.infl.type = 'scoreLevel';
 params.infl.upMult = NaN;
 params.infl.downMult = NaN;
 params.infl.rwrdThreshold = NaN;
+params.infl.tolerance = 0;
+params.infl.width = NaN;
 params.infl.maxPen = NaN;
+
 params.infl.note = paramNote;
 
 runner = CombRunner(user, imposter, params, probeSets, setType, ...

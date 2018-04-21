@@ -79,7 +79,7 @@ classdef TrustModel < handle
 				newTrust = obj.trust;
 			elseif type == 2
 				if isnan(inflParams.rwrdThreshold)
-					%if rwrdThresh = PAParams.lockout
+					rwrdThresh = PAParams.meanScore + inflParams.tolerance;
 				end
 				delta = obj.deltaFromSigmoid();
 			end
