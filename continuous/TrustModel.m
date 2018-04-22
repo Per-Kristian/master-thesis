@@ -75,14 +75,17 @@ classdef TrustModel < handle
 				else
 					delta = inflParams.upMult * obj.range;
 				end
-				obj.trust = min(max(obj.trust + delta, 0), 100);
-				newTrust = obj.trust;
-			elseif type == 2
+			else
 				if isnan(inflParams.rwrdThreshold)
 					rwrdThresh = PAParams.meanScore + inflParams.tolerance;
+				else
+					rwrdThresh = inflParams.rwrdThreshold;
 				end
-				delta = obj.deltaFromSigmoid();
+				delta = obj.deltaFromSigmoid(rwrdThresh, inflParams.width, ...
+					inflParams.maxPen, score);
 			end
+			obj.trust = min(max(obj.trust + delta, 0), 100);
+			newTrust = obj.trust;
 		end
 		
 		function delta = deltaFromSigmoid(obj, rwrdThresh, width, ...

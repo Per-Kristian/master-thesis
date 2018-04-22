@@ -229,7 +229,7 @@ classdef CombRunner < handle
 				blockSets.rawProbe = sets.probeSet(blockStart:blockEnd, :);
 				
 				blockTrustProg = obj.fastBlockProcess(blockSets, trustModel, ...
-					userParams.CA.lockout, userParams.PA.lockout, matcher);
+					userParams.CA.lockout,  matcher);
 				
 				lastProcessed = lastProcessed + size(blockTrustProg, 1);
 				trustProgress(blockStart:lastProcessed,:) = blockTrustProg;
@@ -266,7 +266,7 @@ classdef CombRunner < handle
 		end
 		
 		function blockTrustProgress = fastBlockProcess(obj, sets, ...
-				trustModel, CALockout, PALockout, matcher)
+				trustModel, CALockout, matcher)
 			monoCol = 1;
 			diCol = 2;
 			

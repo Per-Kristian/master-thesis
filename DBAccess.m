@@ -51,7 +51,7 @@ classdef DBAccess
 					params.note);
 			elseif strcmp(obj.systemType, 'comb_SA')
 				colnames = {'type', 'upMult', 'downMult', 'rwrdThreshold', ...
-					'width', 'maxPen', 'note'};
+					'tolerance', 'width', 'maxPen', 'note'};
 				query = obj.buildCombQuery(params);
 			else
 				colnames = {'rwrdThreshold','tolerance','width','maxRwrd', 'maxPen', ...
@@ -81,6 +81,12 @@ classdef DBAccess
 				rwrdThreshString = sprintf('= %d',params.rwrdThreshold);
 			end
 			
+			if isnan(params.tolerance)
+				toleranceString = 'IS NULL';
+			else
+				toleranceString = sprintf('= %d', params.tolerance);
+			end
+			
 			if isnan(params.width)
 				widthString = 'IS NULL';
 			else
@@ -95,9 +101,10 @@ classdef DBAccess
 			
 			query = sprintf(['SELECT id FROM params WHERE', ' ', ...
 					'type = "%s" AND upMult %s AND downMult %s', ' ', ...
-					'AND rwrdThreshold %s AND width %s AND maxPen %s AND note = "%s";'], ...
+					'AND rwrdThreshold %s AND tolerance %s AND width %s', ' ', ...
+					'AND maxPen %s AND note = "%s";'], ...
 					params.type, upMultString, downMultString, rwrdThreshString, ...
-					widthString, maxPenString, params.note);
+					toleranceString, widthString, maxPenString, params.note);
 		end
 		
 		function query = buildCAQuery(obj, params) %#ok<INUSL>
