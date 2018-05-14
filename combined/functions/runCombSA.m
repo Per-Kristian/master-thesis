@@ -22,21 +22,21 @@ params.PA.absThresh = 1.25;
 params.PA.tolerance = 0.33;
 params.PA.note = 'Half weights for digraphs';
 
-%params.infl.type = 'decisionLevel';
-%params.infl.upMult = 1.001;
-%params.infl.downMult = 1.001;
-%params.infl.rwrdThreshold = NaN;
-%params.infl.tolerance = NaN;
-%params.infl.width = NaN;
-%params.infl.maxPen = NaN;
-
-params.infl.type = 'scoreLevel';
-params.infl.upMult = NaN;
-params.infl.downMult = NaN;
+params.infl.type = 'decisionLevel';
+params.infl.upMult = 0.4;
+params.infl.downMult = 0.6;
 params.infl.rwrdThreshold = NaN;
-params.infl.tolerance = 0.3;
-params.infl.width = 0.2;
-params.infl.maxPen = 100 - params.CA.lockout + 0.001;
+params.infl.tolerance = NaN;
+params.infl.width = NaN;
+params.infl.maxPen = NaN;
+
+%params.infl.type = 'scoreLevel';
+%params.infl.upMult = NaN;
+%params.infl.downMult = NaN;
+%params.infl.rwrdThreshold = NaN;
+%params.infl.tolerance = 0.8;
+%params.infl.width = 0.1;
+%params.infl.maxPen = 100 - params.CA.lockout + 0.001;
 
 params.infl.note = paramNote;
 
